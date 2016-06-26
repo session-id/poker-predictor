@@ -10,6 +10,9 @@ def extract(text, start, end):
     end_ind = text.index(end) if end else len(text)
     return text[start_ind:end_ind]
 
+def parse_pty(text):
+    pass
+
 def parse_abs(text):
     def parse_action(line):
         player_ind = players[extract(line, '', ' - ')]
@@ -39,6 +42,7 @@ def parse_abs(text):
     stacks = []
     actions = []
     board = []
+    stakes = None
 
     id_counter = 0
     state = 'START'
@@ -49,10 +53,12 @@ def parse_abs(text):
             i += 1
             continue
         if line.startswith('*** SHOW DOWN ***') or 'not called' in line:
-            return players, stacks, actions, board
+            return stakes, players, stacks, actions, board
 
         if state == 'START':
-            if line.startswith('Seat'):
+            if line.startswith('Stage'):
+                stakes = float(extract(line, '$', ' - '))
+            elif line.startswith('Seat'):
                 players[extract(line, '- ', ' (')] = id_counter
 
                 stacks.append(float(extract(line, '($', ' in chips')))
@@ -89,7 +95,7 @@ def parse_abs(text):
 
     return False
 
-def parse(filename, output_dir):
+def parse(filename, output_dir, start_ind):
     base = basename(filename)[:-4]
     if base.startswith('abs'):
         parser = parse_abs
@@ -97,30 +103,49 @@ def parse(filename, output_dir):
         parser = parse_pty
     else:
         print "Cannot Parse"
-        return
+        return start_ind
 
     with open(filename, 'r') as f:
         hands = f.read().replace("\r\n", "\n").split("\n\n")
-        i = 0
+        ind = start_ind
         for hand in hands:
-            res = parser(hand)
+            try:
+                res = parser(hand)
+            except:
+                continue
             if not res:
                 continue
-            players, stacks, actions, board = res
+            stakes, players, stacks, actions, board = res
             text = json.dumps({
+                'stakes': stakes, 
+                'num_players': len(players), 
                 'players': players,
                 'stacks': stacks,
                 'actions': actions,
                 'board': board
             }, indent=4, separators=(',', ': '))
 
-            output_base = base + '_' + str(i) + '.json'
+            output_base = 'training_' + str(ind) + '.json'
             with open(join(output_dir, output_base), 'w') as g:
                 g.write(text)
 
-            i += 1
+            ind += 1
+    return ind
 
 if __name__ == '__main__':
+    if len(sys.argv) == 2:
+        input_files = []
+        while True:
+            try:
+                line = raw_input()
+                input_files.append(line)
+            except EOFError:
+                break
+    else:
+        input_files = sys.argv[1:-1]
+
     output_dir = sys.argv[-1]
-    for filename in sys.argv[1:-1]:
-        parse(filename, output_dir)
+    ind = 0
+    for filename in input_files:
+        print filename
+        ind = parse(filename, output_dir, ind)

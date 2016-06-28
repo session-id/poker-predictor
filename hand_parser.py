@@ -95,7 +95,7 @@ def parse_abs(text):
 
     return False
 
-def parse(filename, output_dir, start_ind):
+def parse(filename, output_dir, ind):
     base = basename(filename)[:-4]
     if base.startswith('abs'):
         parser = parse_abs
@@ -103,11 +103,10 @@ def parse(filename, output_dir, start_ind):
         parser = parse_pty
     else:
         print "Cannot Parse"
-        return start_ind
 
     with open(filename, 'r') as f:
         hands = f.read().replace("\r\n", "\n").split("\n\n")
-        ind = start_ind
+        output = []
         for hand in hands:
             try:
                 res = parser(hand)
@@ -116,21 +115,31 @@ def parse(filename, output_dir, start_ind):
             if not res:
                 continue
             stakes, players, stacks, actions, board = res
-            text = json.dumps({
+
+            actual_players = set()
+            is_fold = True
+            for action in actions:
+                if action == "NEXT":
+                    break
+                is_fold = is_fold and action[1] == 0
+                actual_players.add(action[0])
+
+            if not is_fold:
+                players = {k:v for k,v in players.items() if v in actual_players}
+
+            output.append({
                 'stakes': stakes, 
                 'num_players': len(players), 
                 'players': players,
                 'stacks': stacks,
                 'actions': actions,
                 'board': board
-            }, indent=4, separators=(',', ': '))
+            })
 
-            output_base = 'training_' + str(ind) + '.json'
-            with open(join(output_dir, output_base), 'w') as g:
-                g.write(text)
-
-            ind += 1
-    return ind
+        text = json.dumps(output, indent=4, separators=(',', ': '))
+        output_base = 'training_' + str(ind) + '.json'
+        with open(join(output_dir, output_base), 'w') as g:
+            g.write(text)
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
@@ -145,7 +154,6 @@ if __name__ == '__main__':
         input_files = sys.argv[1:-1]
 
     output_dir = sys.argv[-1]
-    ind = 0
-    for filename in input_files:
+    for ind, filename in enumerate(input_files):
         print filename
-        ind = parse(filename, output_dir, ind)
+        parse(filename, output_dir, ind)

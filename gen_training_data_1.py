@@ -20,6 +20,7 @@ def gen_training_data(hand):
 
         i = 0
         j = 0
+        count = 0
 
         inputs = [init_vec(num_players)]
         outputs = []
@@ -45,6 +46,9 @@ def gen_training_data(hand):
             else:
                 input_vec[7] = 1
                 output_vec[3] = 1
+                count += 1
+                if count == 10:
+                    return False
 
             inputs.append(input_vec)
             outputs.append(output_vec)
@@ -65,11 +69,15 @@ def gen_training_data(hand):
 
 if __name__ == '__main__':
     input_dir = sys.argv[1]
-    output_file = sys.argv[2]
+    output_dir = sys.argv[2]
 
     inputs = []
     outputs = []
-    for filename in os.listdir(input_dir)[:20]:
+    BUCKET_SIZE = 100
+    i = 0
+    ind = 0
+    for filename in os.listdir(input_dir):
+        i += 1
         filename = os.path.join(input_dir, filename)
         print "Filename:", filename 
 
@@ -84,11 +92,17 @@ if __name__ == '__main__':
                 outputs.append(out)
                 counter += 1
 
+        if i == BUCKET_SIZE:
+            out_file = os.path.join(output_dir, 'training_'+str(ind)+'.npz')
+            input_arr = np.asarray(inputs)
+            output_arr = np.asarray(outputs)
+
+            np.savez_compressed(out_file, input=input_arr, output=output_arr)
+            i = 0
+            inputs = []
+            outputs = []
+            ind += 1
+
         print "Num Hands: ", counter
 
         f.close()
-
-    input_arr = np.asarray(inputs)
-    output_arr = np.asarray(outputs)
-
-    np.savez_compressed(output_file, input=input_arr, output=output_arr)

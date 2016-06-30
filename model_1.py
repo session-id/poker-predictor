@@ -61,13 +61,13 @@ def load_training_data():
     
     return X_train, y_train, X_test, y_test
 
-def build_model():
+def build_model(processor):
     logging.info('Build model...')
     model = Sequential()
     model.add(LSTM(INTER_DIM[0], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
-                   input_length=INPUT_LENGTH, input_dim=INPUT_DIM))  # try using a GRU instead, for fun
+                   input_length=INPUT_LENGTH, input_dim=INPUT_DIM, consume_less=processor))
     model.add(LSTM(INTER_DIM[1], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
-                   input_length=INPUT_LENGTH, input_dim=INTER_DIM[0]))  # try using a GRU instead, for fun
+                   input_length=INPUT_LENGTH, input_dim=INTER_DIM[0], consume_less=processor))
     model.add(TimeDistributed(Dense(OUTPUT_DIM)))
     model.add(Activation('softmax'))
 
@@ -98,9 +98,11 @@ def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train Poker Predictor.')
     parser.add_argument('--file', type=str, help='sum the integers (default: find the max)')
+    parser.add_argument('--gpu', const='gpu', default='cpu', nargs="?", 
+                        help='sum the integers (default: find the max)')
 
     args = parser.parse_args()
 
     X_train, y_train, X_test, y_test = load_training_data()
-    model = build_model()
+    model = build_model(args.gpu)
     train(model, X_train, y_train, X_test, y_test, start_weights_file=args.file)

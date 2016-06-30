@@ -2,7 +2,8 @@ from __future__ import print_function
 
 import os
 import numpy as np
-np.random.seed(1337)  # for reproducibility
+import logging
+import argparse
 
 from keras.preprocessing import sequence
 from keras.utils import np_utils
@@ -10,16 +11,23 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Embedding
 from keras.layers import LSTM, SimpleRNN, GRU
 from keras.utils.visualize_util import plot
+from keras.callbacks import ModelCheckpoint, ProgbarLogger
 
-BATCH_SIZE = 32
-NUM_EPOCHS = 15
-INPUT_DIM = 8
-OUTPUT_DIM = 4
+BATCH_SIZE = 5
+NUM_EPOCHS = 5
+INPUT_DIM = 9
+INPUT_LENGTH = 20
+OUTPUT_DIM = 5
 TRAINING_DATA_DIR = "training_data"
-USE_ONE_TRAINING_FILE = False
+USE_ONE_TRAINING_FILE = True
+TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
+
+np.random.seed(1337)  # for reproducibility
+
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
 def load_training_data():
-    print('Loading data...')
+    logging.info('Loading data...')
 
     # Only for testing
     if USE_ONE_TRAINING_FILE:
@@ -28,8 +36,6 @@ def load_training_data():
             data = np.load(f)
             X_train = data["input"]
             y_train = data["output"]
-        X_test = X_train
-        y_test = y_train
     else:
         Xs = []
         ys = []
@@ -41,41 +47,59 @@ def load_training_data():
                 ys.append(data["output"])
         X_train = np.concatenate(tuple(Xs))
         y_train = np.concatenate(tuple(ys))
-        X_test = X_train
-        y_test = y_train
 
-    print("Shape of X_train: ")
-    print(X_train.shape)
-    print("Shape of y_train")
-    print(y_train.shape)
+    logging.info("Shape of X_train: ")
+    logging.info(X_train.shape)
+    logging.info("Shape of y_train")
+    logging.info(y_train.shape)
+
+    train_test_sep_idx = int(X_train.shape[0] * TRAIN_DATA_RATIO)
+    X_test = X_train[train_test_sep_idx:]
+    y_test = y_train[train_test_sep_idx:]
+    X_train = X_train[:train_test_sep_idx]
+    y_train = y_train[:train_test_sep_idx]
     
     return X_train, y_train, X_test, y_test
 
 def build_model():
-    print('Build model...')
+    logging.info('Build model...')
     model = Sequential()
-    model.add(LSTM(OUTPUT_DIM, dropout_W=0.2, dropout_U=0.2, input_dim=INPUT_DIM))  # try using a GRU instead, for fun
+    model.add(LSTM(OUTPUT_DIM, return_sequences=True, dropout_W=0.2, dropout_U=0.2,
+                   input_length=INPUT_LENGTH, input_dim=INPUT_DIM))  # try using a GRU instead, for fun
+    model.add(LSTM(OUTPUT_DIM, return_sequences=True, dropout_W=0.2, dropout_U=0.2,
+                   input_length=INPUT_LENGTH, input_dim=OUTPUT_DIM))  # try using a GRU instead, for fun
     model.add(Activation('softmax'))
 
     # try using different optimizers and different optimizer configs
-    model.compile(loss='binary_crossentropy',
-                  optimizer='adam',
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='rmsprop',
                   metrics=['accuracy'])
 
-    print('Train...')
     plot(model, to_file='model.png', show_shapes=True, show_layer_names=True)    
     return model
 
-def train(model, X_train, y_train, X_test, y_test):
+def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
+    logging.info('Train...')
+    save_weights = ModelCheckpoint('weights.{epoch:02d}.hdf5')
+    logger = ProgbarLogger()
+
+    if start_weights_file:
+        model.load_weights(start_weights_file)
+
     model.fit(X_train, y_train, batch_size=BATCH_SIZE, nb_epoch=NUM_EPOCHS,
-              validation_data=(X_test, y_test))
+              validation_data=(X_test, y_test), callbacks=[save_weights, logger])
 
     score, acc = model.evaluate(X_test, y_test,
                                 batch_size=BATCH_SIZE)
-    print('Test score:', score)
-    print('Test accuracy:', acc)
+    logging.info('Test score: {0}'.format(score))
+    logging.info('Test accuracy: {0}'.format(acc))
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Train Poker Predictor.')
+    parser.add_argument('--file', type=str, help='sum the integers (default: find the max)')
+
+    args = parser.parse_args()
+
     X_train, y_train, X_test, y_test = load_training_data()
     model = build_model()
-    train(model, X_train, y_train, X_test, y_test)
+    train(model, X_train, y_train, X_test, y_test, start_weights_file=args.file)

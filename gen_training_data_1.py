@@ -65,7 +65,7 @@ def gen_training_data(hand):
                 break
         if len(inputs) < MAX_ACTIONS:
             for _ in range(MAX_ACTIONS - len(inputs)):
-                inputs.append([0, 0, 0, 0, 0, 0, 0, 0, 1])
+                inputs.append(init_vec(num_players)[:4] + [0, 0, 0, 0, 1])
                 outputs.append([0, 0, 0, 0, 1])
         elif len(inputs) > MAX_ACTIONS:
             inputs = inputs[:MAX_ACTIONS]

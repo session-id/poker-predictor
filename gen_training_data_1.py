@@ -7,7 +7,7 @@ MAX_ACTIONS = 20
 PLAYER_RANGE = (4, 7)
 
 def init_vec(num_players):
-    input_vec = [0]*8
+    input_vec = [0]*9
     input_vec[num_players - PLAYER_RANGE[0]] = 1
     return input_vec
 
@@ -30,7 +30,7 @@ def gen_training_data(hand):
                 break
 
             input_vec = init_vec(num_players)
-            output_vec = [0] * 4
+            output_vec = [0] * 5
 
             if action[0] == players[j]:
                 if action[1] == 0:
@@ -46,20 +46,27 @@ def gen_training_data(hand):
             else:
                 input_vec[7] = 1
                 output_vec[3] = 1
+
                 count += 1
                 if count == 10:
                     return False
 
-            inputs.append(input_vec)
             outputs.append(output_vec)
+            inputs.append(input_vec)
 
             j = (j + 1) % num_players
 
         inputs = inputs[:-1]
+        while True:
+            if inputs[-1][7] == 1:
+                inputs.pop()
+                outputs.pop()
+            else:
+                break
         if len(inputs) < MAX_ACTIONS:
             for _ in range(MAX_ACTIONS - len(inputs)):
-                inputs.append([0]*8)
-                outputs.append([0, 0, 0, 1])
+                inputs.append([0, 0, 0, 0, 0, 0, 0, 0, 1])
+                outputs.append([0, 0, 0, 0, 1])
         elif len(inputs) > MAX_ACTIONS:
             inputs = inputs[:MAX_ACTIONS]
             outputs = outputs[:MAX_ACTIONS]

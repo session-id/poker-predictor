@@ -8,17 +8,18 @@ import argparse
 from keras.preprocessing import sequence
 from keras.utils import np_utils
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Embedding
-from keras.layers import LSTM, SimpleRNN, GRU
+from keras.layers import Dense, Dropout, Activation, TimeDistributed
+from keras.layers import LSTM
 from keras.callbacks import ModelCheckpoint, ProgbarLogger
 
-BATCH_SIZE = 5
+BATCH_SIZE = 32
 NUM_EPOCHS = 5
 INPUT_DIM = 9
 INPUT_LENGTH = 20
 OUTPUT_DIM = 5
+INTER_DIM = (20, 10)
 TRAINING_DATA_DIR = "training_data"
-USE_ONE_TRAINING_FILE = True
+USE_ONE_TRAINING_FILE = False
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
 
 np.random.seed(1337)  # for reproducibility
@@ -63,10 +64,11 @@ def load_training_data():
 def build_model():
     logging.info('Build model...')
     model = Sequential()
-    model.add(LSTM(OUTPUT_DIM, return_sequences=True, dropout_W=0.2, dropout_U=0.2,
+    model.add(LSTM(INTER_DIM[0], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
                    input_length=INPUT_LENGTH, input_dim=INPUT_DIM))  # try using a GRU instead, for fun
-    model.add(LSTM(OUTPUT_DIM, return_sequences=True, dropout_W=0.2, dropout_U=0.2,
-                   input_length=INPUT_LENGTH, input_dim=OUTPUT_DIM))  # try using a GRU instead, for fun
+    model.add(LSTM(INTER_DIM[1], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
+                   input_length=INPUT_LENGTH, input_dim=INTER_DIM[0]))  # try using a GRU instead, for fun
+    model.add(TimeDistributed(Dense(OUTPUT_DIM)))
     model.add(Activation('softmax'))
 
     # try using different optimizers and different optimizer configs
@@ -88,10 +90,10 @@ def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
     model.fit(X_train, y_train, batch_size=BATCH_SIZE, nb_epoch=NUM_EPOCHS,
               validation_data=(X_test, y_test), callbacks=[save_weights, logger])
 
-    score, acc = model.evaluate(X_test, y_test,
-                                batch_size=BATCH_SIZE)
-    logging.info('Test score: {0}'.format(score))
-    logging.info('Test accuracy: {0}'.format(acc))
+    # score, acc = model.evaluate(X_test, y_test,
+    #                             batch_size=BATCH_SIZE)
+    # logging.info('Test score: {0}'.format(score))
+    # logging.info('Test accuracy: {0}'.format(acc))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train Poker Predictor.')

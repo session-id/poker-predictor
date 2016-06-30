@@ -87,3 +87,10 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+*.hdf5
+.hdf5
+
+histories/
+parsed_histories/
+training_data/

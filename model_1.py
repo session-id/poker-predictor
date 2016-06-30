@@ -10,7 +10,6 @@ from keras.utils import np_utils
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Embedding
 from keras.layers import LSTM, SimpleRNN, GRU
-from keras.utils.visualize_util import plot
 from keras.callbacks import ModelCheckpoint, ProgbarLogger
 
 BATCH_SIZE = 5
@@ -75,7 +74,7 @@ def build_model():
                   optimizer='rmsprop',
                   metrics=['accuracy'])
 
-    plot(model, to_file='model.png', show_shapes=True, show_layer_names=True)    
+    # plot(model, to_file='model.png', show_shapes=True, show_layer_names=True)    
     return model
 
 def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):

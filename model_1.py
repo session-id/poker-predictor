@@ -14,9 +14,9 @@ from keras.callbacks import ModelCheckpoint, ProgbarLogger
 
 BATCH_SIZE = 32
 NUM_EPOCHS = 5
-INPUT_DIM = 9
+INPUT_DIM = 14
 INPUT_LENGTH = 20
-OUTPUT_DIM = 5
+OUTPUT_DIM = 3
 INTER_DIM = (20, 10)
 TRAINING_DATA_DIR = "training_data"
 USE_ONE_TRAINING_FILE = False
@@ -58,7 +58,7 @@ def load_training_data():
     y_test = y_train[train_test_sep_idx:]
     X_train = X_train[:train_test_sep_idx]
     y_train = y_train[:train_test_sep_idx]
-    
+
     return X_train, y_train, X_test, y_test
 
 def build_model(processor):

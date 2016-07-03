@@ -6,67 +6,59 @@ import numpy as np
 MAX_ACTIONS = 20
 PLAYER_RANGE = (4, 7)
 
-def init_vec(num_players):
-    input_vec = [0]*9
-    input_vec[num_players - PLAYER_RANGE[0]] = 1
+ACTION_MAP = {0:0,1:1,2:1,3:2,4:2,5:2}
+
+def get_input_vec(num_players, pos, action):
+    input_vec = [0] * 14
+    if num_players is not None:
+        ind = num_players - PLAYER_RANGE[0]
+        input_vec[ind] = 1
+    if pos is not None:
+        ind = pos + 4
+        input_vec[ind] = 1
+    if action is not None:
+        ind = action + 11
+        input_vec[ind] = 1
+
     return input_vec
+
+def get_output_vec(action):
+    output_vec = [0] * 3
+    if action is not None:
+        output_vec[action] = 1
+
+    return output_vec
 
 def gen_training_data(hand):
     num_players = hand['num_players']
+
+    # First filter by num players
     if PLAYER_RANGE[0] <= num_players <= PLAYER_RANGE[1]:
-        players = []
-        for action in hand['actions'][:num_players]:
-            players.append(action[0])
+        # Maps player to their position (UTG is 0, Mid is 1, etc.)
+        players_to_pos = {}
+        for i, move in enumerate(hand['actions'][:num_players]):
+            players_to_pos[move[0]] = i
 
-        i = 0
-        j = 0
-        count = 0
-
-        inputs = [init_vec(num_players)]
+        inputs = [get_input_vec(num_players, None, None)]
         outputs = []
-        while i < len(hand['actions']):
-            action = hand['actions'][i]
-            if action == 'NEXT':
+        for move in hand['actions']:
+            if move == 'NEXT':
                 break
 
-            input_vec = init_vec(num_players)
-            output_vec = [0] * 5
+            pos = players_to_pos[move[0]]
+            action = ACTION_MAP[move[1]]
+            input_vec = get_input_vec(num_players, pos, action)
+            output_vec = get_output_vec(action)
 
-            if action[0] == players[j]:
-                if action[1] == 0:
-                    input_vec[4] = 1
-                    output_vec[0] = 1
-                elif action[1] in [1, 2]:
-                    input_vec[5] = 1
-                    output_vec[1] = 1
-                else:
-                    input_vec[6] = 1
-                    output_vec[2] = 1
-                i += 1
-            else:
-                input_vec[7] = 1
-                output_vec[3] = 1
-
-                count += 1
-                if count == 10:
-                    return False
-
-            outputs.append(output_vec)
             inputs.append(input_vec)
-
-            j = (j + 1) % num_players
+            outputs.append(output_vec)
 
         inputs = inputs[:-1]
-        while True:
-            if inputs[-1][7] == 1:
-                inputs.pop()
-                outputs.pop()
-            else:
-                break
+
         if len(inputs) < MAX_ACTIONS:
             for _ in range(MAX_ACTIONS - len(inputs)):
-                inputs.append(init_vec(num_players)[:4] + [0, 0, 0, 0, 1])
-                outputs.append([0, 0, 0, 0, 1])
+                inputs.append(get_input_vec(None, None, None))
+                outputs.append(get_output_vec(None))
         elif len(inputs) > MAX_ACTIONS:
             inputs = inputs[:MAX_ACTIONS]
             outputs = outputs[:MAX_ACTIONS]
@@ -92,7 +84,10 @@ if __name__ == '__main__':
 
         counter = 0
         for hand in json.loads(f.read()):
-            res = gen_training_data(hand)
+            try:
+                res = gen_training_data(hand)
+            except:
+                continue
             if res:
                 inp, out = res
                 inputs.append(inp)

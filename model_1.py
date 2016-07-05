@@ -10,7 +10,7 @@ from keras.utils import np_utils
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, TimeDistributed, TimeDistributedDense
 from keras.layers import LSTM
-from keras.callbacks import ModelCheckpoint, ProgbarLogger
+from keras.callbacks import ModelCheckpoint, ProgbarLogger, Callback
 
 BATCH_SIZE = 64
 NUM_EPOCHS = 5
@@ -25,6 +25,13 @@ TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
 np.random.seed(1337)  # for reproducibility
 
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+
+class PrintLoss(Callback):
+    def __init__(self, pad_ratio):
+        self.pad_ratio = pad_ratio
+
+    def on_epoch_end(self, epoch, logs={}):
+        logging.info('True Loss: {0}'.format(logs.get('loss') * self.pad_ratio))
 
 # NUM_SAMPLES / NUM_NON_PADDED_SAMPLES
 def pad_ratio(y):
@@ -89,16 +96,16 @@ def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
     logging.info('Train...')
     save_weights = ModelCheckpoint('weights.{epoch:02d}.hdf5')
     logger = ProgbarLogger()
+    printloss = PrintLoss(pad_ratio(y_test))
 
     if start_weights_file:
         model.load_weights(start_weights_file)
 
     model.fit(X_train, y_train, batch_size=BATCH_SIZE, nb_epoch=NUM_EPOCHS,
-              validation_data=(X_test, y_test), callbacks=[save_weights, logger])
+              validation_data=(X_test, y_test), callbacks=[save_weights, logger, printloss])
 
     score, acc = model.evaluate(X_test, y_test,
                                 batch_size=BATCH_SIZE)
-    logging.info("Loss: {0}".format(score * pad_ratio(y_test)))
     # logging.info('Test score: {0}'.format(score))
     # logging.info('Test accuracy: {0}'.format(acc))
 

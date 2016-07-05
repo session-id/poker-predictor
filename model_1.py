@@ -64,6 +64,11 @@ def load_training_data():
     logging.info("Shape of y_train")
     logging.info(y_train.shape)
 
+    # Randomize hands
+    rand_perm = np.random.permutation(X_train.shape[0])
+    X_train = X_train[rand_perm]
+    y_train = y_train[rand_perm]
+
     train_test_sep_idx = int(X_train.shape[0] * TRAIN_DATA_RATIO)
     X_test = X_train[train_test_sep_idx:]
     y_test = y_train[train_test_sep_idx:]

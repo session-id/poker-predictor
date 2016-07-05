@@ -8,11 +8,11 @@ import argparse
 from keras.preprocessing import sequence
 from keras.utils import np_utils
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, TimeDistributed
+from keras.layers import Dense, Dropout, Activation, TimeDistributed, TimeDistributedDense
 from keras.layers import LSTM
 from keras.callbacks import ModelCheckpoint, ProgbarLogger
 
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 NUM_EPOCHS = 5
 INPUT_DIM = 14
 INPUT_LENGTH = 20
@@ -25,6 +25,10 @@ TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
 np.random.seed(1337)  # for reproducibility
 
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+
+# NUM_SAMPLES / NUM_NON_PADDED_SAMPLES
+def pad_ratio(y):
+    return float(y.shape[0] * y.shape[1]) / np.sum(y, (0,1,2))
 
 def load_training_data():
     logging.info('Loading data...')
@@ -64,11 +68,13 @@ def load_training_data():
 def build_model(processor):
     logging.info('Build model...')
     model = Sequential()
+
     model.add(LSTM(INTER_DIM[0], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
                    input_length=INPUT_LENGTH, input_dim=INPUT_DIM, consume_less=processor))
     model.add(LSTM(INTER_DIM[1], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
                    input_length=INPUT_LENGTH, input_dim=INTER_DIM[0], consume_less=processor))
     model.add(TimeDistributed(Dense(OUTPUT_DIM)))
+
     model.add(Activation('softmax'))
 
     # try using different optimizers and different optimizer configs
@@ -90,8 +96,9 @@ def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
     model.fit(X_train, y_train, batch_size=BATCH_SIZE, nb_epoch=NUM_EPOCHS,
               validation_data=(X_test, y_test), callbacks=[save_weights, logger])
 
-    # score, acc = model.evaluate(X_test, y_test,
-    #                             batch_size=BATCH_SIZE)
+    score, acc = model.evaluate(X_test, y_test,
+                                batch_size=BATCH_SIZE)
+    logging.info("Loss: {0}".format(score * pad_ratio(y_test)))
     # logging.info('Test score: {0}'.format(score))
     # logging.info('Test accuracy: {0}'.format(acc))
 
@@ -104,5 +111,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     X_train, y_train, X_test, y_test = load_training_data()
+    logging.info("Padding ratio (multiply loss by this): ")
+    logging.info(pad_ratio(y_test))
+
     model = build_model(args.gpu)
     train(model, X_train, y_train, X_test, y_test, start_weights_file=args.file)

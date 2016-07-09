@@ -7,17 +7,19 @@ import argparse
 
 from keras.preprocessing import sequence
 from keras.utils import np_utils
-from keras.models import Sequential
+from keras.models import Model
 from keras.layers import Dense, Dropout, Activation, TimeDistributed, TimeDistributedDense
-from keras.layers import LSTM
+from keras.layers import LSTM, merge, Input
 from keras.callbacks import ModelCheckpoint, ProgbarLogger, Callback
 
 BATCH_SIZE = 64
 NUM_EPOCHS = 5
 INPUT_DIM = 14
+FLOP_DIM = 42
 INPUT_LENGTH = 20
 OUTPUT_DIM = 3
-INTER_DIM = (20, 10)
+INTER_DIM = (30, 10)
+FLOP_INTER_DIM = (20, 10)
 TRAINING_DATA_DIR = "training_data"
 USE_ONE_TRAINING_FILE = False
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
@@ -59,35 +61,51 @@ def load_training_data():
         X_train = np.concatenate(tuple(Xs))
         y_train = np.concatenate(tuple(ys))
 
+    # TODO: Get flops_train
+
     logging.info("Shape of X_train: ")
     logging.info(X_train.shape)
     logging.info("Shape of y_train")
     logging.info(y_train.shape)
+    logging.info("Shape of flops_train")
+    logging.info(flops_train.shape)
 
     # Randomize hands
     rand_perm = np.random.permutation(X_train.shape[0])
     X_train = X_train[rand_perm]
     y_train = y_train[rand_perm]
+    flops_train = flops_train[rand_perm]
 
     train_test_sep_idx = int(X_train.shape[0] * TRAIN_DATA_RATIO)
     X_test = X_train[train_test_sep_idx:]
     y_test = y_train[train_test_sep_idx:]
     X_train = X_train[:train_test_sep_idx]
     y_train = y_train[:train_test_sep_idx]
+    flops_test = flops_train[train_test_sep_idx:]
+    flops_train = flops.train[:train_test_sep_idx]
 
-    return X_train, y_train, X_test, y_test
+    return X_train, flops_train, y_train, X_test, flops_test, y_test
 
 def build_model(processor):
     logging.info('Build model...')
-    model = Sequential()
 
-    model.add(LSTM(INTER_DIM[0], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
-                   input_length=INPUT_LENGTH, input_dim=INPUT_DIM, consume_less=processor))
-    model.add(LSTM(INTER_DIM[1], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
-                   input_length=INPUT_LENGTH, input_dim=INTER_DIM[0], consume_less=processor))
-    model.add(TimeDistributed(Dense(OUTPUT_DIM)))
+    action_input = Input(shape=(INPUT_LENGTH, INPUT_DIM))
+    flop_input = Input(shape=(INPUT_LENGTH, FLOP_DIM))
 
-    model.add(Activation('softmax'))
+    # 2 dense layers to encode flop
+    encoded_flop = TimeDistributed(Dense(FLOP_INTER_DIM[0]))(flop_input)
+    encoded_flop = TimeDistributed(Dense(FLOP_INTER_DIM[1]))(encoded_flop)
+
+    lstm_input = merge([action_input, encoded_flop], mode='concat', concat_axis=2)
+
+    seq = LSTM(INTER_DIM[0], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
+               input_length=INPUT_LENGTH, input_dim=INPUT_DIM, consume_less=processor)(lstm_input)
+    seq = LSTM(INTER_DIM[1], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
+               input_length=INPUT_LENGTH, input_dim=INTER_DIM[0], consume_less=processor)(seq)
+    seq = TimeDistributed(Dense(OUTPUT_DIM))(seq)
+    probs = Activation('softmax')(seq)
+
+    model = Model(input=[action_input, flop_input], output=probs)
 
     # try using different optimizers and different optimizer configs
     model.compile(loss='categorical_crossentropy',
@@ -122,9 +140,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    X_train, y_train, X_test, y_test = load_training_data()
-    logging.info("Padding ratio (multiply loss by this): ")
-    logging.info(pad_ratio(y_test))
+    # X_train, flops_train, y_train, X_test, flops_test, y_test = load_training_data()
+    # logging.info("Padding ratio (multiply loss by this): ")
+    # logging.info(pad_ratio(y_test))
 
     model = build_model(args.gpu)
-    train(model, X_train, y_train, X_test, y_test, start_weights_file=args.file)
+    # train(model, X_train, y_train, X_test, y_test, start_weights_file=args.file)

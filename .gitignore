@@ -93,6 +93,7 @@ ENV/
 
 histories/
 parsed_histories/
-training_data/
+flop/training_data/
+preflop/training_data/
 training_data_2/
 *.sublime-*

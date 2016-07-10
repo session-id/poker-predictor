@@ -21,8 +21,10 @@ INPUT_LENGTH = 20
 INTER_DIM = (30, 10)
 FLOP_INTER_DIM = (20, 10)
 TRAINING_DATA_DIR = "training_data"
-USE_ONE_TRAINING_FILE = False
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
+
+SINGLE_TRAINING_FILENAME =  "training_data/training_2.npz"
+USE_ONE_TRAINING_FILE = False
 
 np.random.seed(1337)  # for reproducibility
 
@@ -44,8 +46,7 @@ def load_training_data():
 
     # Only for testing
     if USE_ONE_TRAINING_FILE:
-        filename = "training_data/training_2.npz"
-        with open(filename) as f:
+        with open(SINGLE_TRAINING_FILENAME) as f:
             data = np.load(f)
             X_train = data["input"]
             y_train = data["output"]

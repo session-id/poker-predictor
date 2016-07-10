@@ -49,19 +49,24 @@ def load_training_data():
             data = np.load(f)
             X_train = data["input"]
             y_train = data["output"]
+            flops_train = data["board"]
     else:
         Xs = []
         ys = []
+        flops = []
         for filename in os.listdir(TRAINING_DATA_DIR):
             full_name = TRAINING_DATA_DIR + "/" + filename;
             with open(full_name) as f:
                 data = np.load(f)
                 Xs.append(data["input"])
                 ys.append(data["output"])
+                flops.append(data["board"])
         X_train = np.concatenate(tuple(Xs))
         y_train = np.concatenate(tuple(ys))
+        flops_train = np.concatenate(tuple(flops))
 
-    # TODO: Get flops_train
+    # Expand flops_train
+    flops_train = np.tile(np.expand_dims(flops_train, 1), (1, INPUT_LENGTH, 1))
 
     logging.info("Shape of X_train: ")
     logging.info(X_train.shape)

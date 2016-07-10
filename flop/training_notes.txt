@@ -1,0 +1,16 @@
+1. 
+Batch Size: 64
+Num Epochs: 5
+Model: Flop > Dense > Dense > LSTM > LSTM > Dense > Softmax > Cross Entropy
+                               ^
+                          Action vector
+Flop Inter Dim: 20, 10
+Inter Dim: 30, 10
+Dropout: 0.2
+Optimizer: RMSProp
+Validation Loss: 0.5485, 0.4325, 0.4055, 0.3906, 0.3819
+
+Other models:
+
+Naive Bayes: 0.690868414228 average log loss
+Dummy model: 1.07967285824 average log loss

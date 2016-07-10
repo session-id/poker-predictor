@@ -77,14 +77,14 @@ def parse_abs(text):
         elif state == 'FLOP':
             if line.startswith('*** TURN ***'):
                 actions.append('NEXT')
-                board.append(line[-3:-1])
+                board.append(line[line.rindex('[') + 1, line.rindex(']')])
                 state = 'TURN'
             else:
                 actions.append(parse_action(line))
         elif state == 'TURN':
             if line.startswith('*** RIVER ***'):
                 actions.append('NEXT')
-                board.append(line[-3:-1])
+                board.append(line[line.rindex('[') + 1, line.rindex(']')])
                 state = 'RIVER'
             else:
                 actions.append(parse_action(line))

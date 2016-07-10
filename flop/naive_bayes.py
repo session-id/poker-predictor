@@ -46,39 +46,49 @@ class SequenceNaiveBayes:
         probs = np.divide(probs, np.sum(probs))
         return probs
 
-def train(y, X, nb):
-    for n, (hand, meta) in enumerate(zip(y, X)):
+def make_extras(X_hand, flop):
+    return [X_hand[0:4], flop[0:13], flop[13:26], \
+            flop[26:39], flop[39:42], X_hand[4:11]]
+
+def train(y, X, flops, nb):
+    for n, (hand, meta, flop) in enumerate(zip(y, X, flops)):
         print "\r" + str(n+1) + "/" + str(y.shape[0]),
-        extra = meta[0, 0:11]
-        for i, action in enumerate(hand):
+        for i, (action, X_row, flop_row) in enumerate(zip(hand, meta, flop)):
+            extras = make_extras(X_row, flop_row)
             # if hit padding
             if np.max(action) == 0:
                 continue
             class_ = list(action).index(1)
-            nb.add_history(class_, hand[0:i, :], [extra])
+            nb.add_history(class_, hand[0:i, :], extras)
 
-def test(y, X, nb):
+def test(y, X, flops, nb):
     num_total = 0
+    num_correct = 0
     total_log_loss = 0
-    for n, (hand, meta) in enumerate(zip(y, X)):
+    for n, (hand, meta, flop) in enumerate(zip(y, X, flops)):
         print "\r" + str(n+1) + "/" + str(y.shape[0]),
-        extra = meta[0, 0:11]
-        for i, action in enumerate(hand):
+        for i, (action, X_row, flop_row) in enumerate(zip(hand, meta, flop)):
+            extras = make_extras(X_row, flop_row)
             if np.max(action) == 0:
                 continue
-            probs = nb.predict(hand[0:i, :], [extra])
+            probs = nb.predict(hand[0:i, :], extras)
+            most_likely = list(probs).index(np.max(probs))
+            if action[most_likely] == 1:
+                num_correct += 1
             total_log_loss -= np.log(np.sum(np.multiply(probs, action)))
             num_total += 1
+    print("accuracy:")
+    print(float(num_correct) / num_total)
     print("Average log loss:")
     print(total_log_loss / num_total)
 
 if __name__ == '__main__':
-    # model.USE_ONE_TRAINING_FILE = True
-    X_train, flop_train, y_train, X_test, flop_test, y_test = model.load_training_data()
+    model.USE_ONE_TRAINING_FILE = True
+    X_train, flops_train, y_train, X_test, flops_test, y_test = model.load_training_data()
     print("Training...")
-    nb = SequenceNaiveBayes(y_train.shape[2], y_train.shape[1], [11])
-    train(y_train, X_train, nb)
+    nb = SequenceNaiveBayes(y_train.shape[2], y_train.shape[1], [4, 13, 13, 13, 3, 7])
+    train(y_train, X_train, flops_train, nb)
     nb.end_training()
     print("\n")
     print("Testing...")
-    test(y_test, X_test, nb)
+    test(y_test, X_test, flops_test, nb)

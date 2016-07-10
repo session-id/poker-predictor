@@ -44,7 +44,7 @@ def load_training_data():
 
     # Only for testing
     if USE_ONE_TRAINING_FILE:
-        filename = "training_data/training_0.npz";
+        filename = "training_data/training_0.npz"
         with open(filename) as f:
             data = np.load(f)
             X_train = data["input"]
@@ -55,7 +55,7 @@ def load_training_data():
         ys = []
         flops = []
         for filename in os.listdir(TRAINING_DATA_DIR):
-            full_name = TRAINING_DATA_DIR + "/" + filename;
+            full_name = TRAINING_DATA_DIR + "/" + filename
             with open(full_name) as f:
                 data = np.load(f)
                 Xs.append(data["input"])

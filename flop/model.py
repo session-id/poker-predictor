@@ -14,10 +14,10 @@ from keras.callbacks import ModelCheckpoint, ProgbarLogger, Callback
 
 BATCH_SIZE = 64
 NUM_EPOCHS = 5
-INPUT_DIM = 14
+INPUT_DIM = 16
 FLOP_DIM = 42
-INPUT_LENGTH = 20
 OUTPUT_DIM = 3
+INPUT_LENGTH = 20
 INTER_DIM = (30, 10)
 FLOP_INTER_DIM = (20, 10)
 TRAINING_DATA_DIR = "training_data"
@@ -87,7 +87,7 @@ def load_training_data():
     X_train = X_train[:train_test_sep_idx]
     y_train = y_train[:train_test_sep_idx]
     flops_test = flops_train[train_test_sep_idx:]
-    flops_train = flops.train[:train_test_sep_idx]
+    flops_train = flops_train[:train_test_sep_idx]
 
     return X_train, flops_train, y_train, X_test, flops_test, y_test
 
@@ -145,9 +145,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # X_train, flops_train, y_train, X_test, flops_test, y_test = load_training_data()
-    # logging.info("Padding ratio (multiply loss by this): ")
-    # logging.info(pad_ratio(y_test))
+    X_train, flops_train, y_train, X_test, flops_test, y_test = load_training_data()
+    logging.info("Padding ratio (multiply loss by this): ")
+    logging.info(pad_ratio(y_test))
 
     model = build_model(args.gpu)
-    # train(model, X_train, y_train, X_test, y_test, start_weights_file=args.file)
+    train(model, [X_train, flops_train], y_train, [X_test, flops_test], y_test, start_weights_file=args.file)

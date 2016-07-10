@@ -25,11 +25,14 @@ RANK_MAP = {
     '8':6,
     '9':7,
     '10':8,
+    'T':8,
     'J':9,
     'Q':10,
     'K':11,
     'A':12
 }
+
+excess_count = 0
 
 def get_input_vec(num_players, pos, action, street):
     input_vec = [0] * 16
@@ -56,6 +59,8 @@ def get_output_vec(action):
     return output_vec
 
 def parse_actions(actions, players_to_pos, num_players):
+    global excess_count
+
     street = 0
     inputs = [get_input_vec(num_players, None, None, street)]
     outputs = []
@@ -86,6 +91,7 @@ def parse_actions(actions, players_to_pos, num_players):
             inputs.append(get_input_vec(None, None, None, None))
             outputs.append(get_output_vec(None))
     elif len(inputs) > MAX_ACTIONS:
+        excess_count += 1
         inputs = inputs[:MAX_ACTIONS]
         outputs = outputs[:MAX_ACTIONS]
 
@@ -172,5 +178,7 @@ if __name__ == '__main__':
             ind += 1
 
         print "Num Hands: ", counter
+        print "Excess Count:", excess_count
+        excess_count = 0 
 
         f.close()

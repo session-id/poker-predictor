@@ -44,7 +44,7 @@ def load_training_data():
 
     # Only for testing
     if USE_ONE_TRAINING_FILE:
-        filename = "training_data/training_0.npz"
+        filename = "training_data/training_1.npz"
         with open(filename) as f:
             data = np.load(f)
             X_train = data["input"]

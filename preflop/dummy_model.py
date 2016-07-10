@@ -1,5 +1,5 @@
 import numpy as np
-import model_1
+import model
 
 def evaluate(inp, probs):
     num_players = list(inp[0,:4]).index(1) + 4
@@ -21,7 +21,7 @@ def evaluate(inp, probs):
     return (num_total, num_correct, log_prob_sum)
 
 if __name__ == '__main__':
-    X_train, y_train, X_test, y_test = model_1.load_training_data()
+    X_train, y_train, X_test, y_test = model.load_training_data()
     probs = np.mean(y_train, (0,1))
     probs = np.multiply(probs, 1.0 / np.sum(probs))
     print probs

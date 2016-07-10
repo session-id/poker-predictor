@@ -1,5 +1,5 @@
 import numpy as np
-import model_1
+import model
 
 class SequenceNaiveBayes:
     def __init__(self, num_classes, num_time_steps, extra_dim):
@@ -36,7 +36,8 @@ class SequenceNaiveBayes:
 
 
 def train(y, X, nb):
-    for hand, meta in zip(y, X):
+    for n, (hand, meta) in enumerate(zip(y, X)):
+        print "\r" + str(n) + "/" + str(y.shape[0]),
         extra = meta[0, 0:11]
         for i, action in enumerate(hand):
             # if hit padding
@@ -48,7 +49,8 @@ def train(y, X, nb):
 def test(y, X, nb):
     num_total = 0
     total_log_loss = 0
-    for hand, meta in zip(y, X):
+    for n, (hand, meta) in enumerate(zip(y, X)):
+        print "\r" + str(n) + "/" + str(y.shape[0]) ,
         extra = meta[0, 0:11]
         for i, action in enumerate(hand):
             if np.max(action) == 0:
@@ -60,8 +62,7 @@ def test(y, X, nb):
     print(total_log_loss / num_total)
 
 if __name__ == '__main__':
-    model_1.USE_ONE_TRAINING_FILE = True
-    X_train, y_train, X_test, y_test = model_1.load_training_data()
+    X_train, y_train, X_test, y_test = model.load_training_data()
     print("Training...")
     nb = SequenceNaiveBayes(y_train.shape[2], y_train.shape[1], 11)
     train(y_train, X_train, nb)

@@ -40,3 +40,8 @@ True Loss: .8015, .7824, .7785, .7766, .7753
 Without dense layer
 Loss: .2349/.2291, .2300/.2281, .2288/.2272, .2283/.2270, .2263/.2249
 True Loss: .8205, .8033, .7993, .7972, .7904
+
+Other models:
+
+Naive Bayes: 0.843889160562 average log loss
+Dummy model: 0.887194229042 average log loss

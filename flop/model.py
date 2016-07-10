@@ -44,7 +44,7 @@ def load_training_data():
 
     # Only for testing
     if USE_ONE_TRAINING_FILE:
-        filename = "training_data/training_1.npz"
+        filename = "training_data/training_2.npz"
         with open(filename) as f:
             data = np.load(f)
             X_train = data["input"]
@@ -58,9 +58,10 @@ def load_training_data():
             full_name = TRAINING_DATA_DIR + "/" + filename
             with open(full_name) as f:
                 data = np.load(f)
-                Xs.append(data["input"])
-                ys.append(data["output"])
-                flops.append(data["board"])
+                if len(data["input"].shape) == 3 and len(data["output"].shape) == 3:
+                    Xs.append(data["input"])
+                    ys.append(data["output"])
+                    flops.append(data["board"])
         X_train = np.concatenate(tuple(Xs))
         y_train = np.concatenate(tuple(ys))
         flops_train = np.concatenate(tuple(flops))

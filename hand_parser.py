@@ -7,15 +7,199 @@ MATCH_NUM = re.compile('\d+\.?\d*')
 
 def extract(text, start, end):
     start_ind = text.index(start) + len(start)
+    text = text[start_ind:]
     end_ind = text.index(end) if end else len(text)
-    return text[start_ind:end_ind]
+    return text[:end_ind]
+
+def parse_ong(text):
+    def parse_action(line):
+        player_ind = players[extract(line, '', ' ')]
+
+        action = extract(line, ' ', '')
+        if action.startswith('folds'):
+            action = [0]
+        elif action.startswith('checks'):
+            action = [1]
+        elif action.startswith('calls'):
+            action = [2]
+        elif action.startswith('bets'):
+            amt = float(MATCH_NUM.findall(action)[0])
+            action = [3, amt]
+        elif action.startswith('raises'):
+            amt = float(MATCH_NUM.findall(action)[1])
+            action = [4, amt]
+        else:
+            return False
+
+        return [player_ind] + action
+
+    lines = text.split("\n")
+    players = {}
+    stacks = []
+    actions = []
+    board = []
+    stakes = None
+
+    id_counter = 0
+    state = 'START'
+    for line in lines:
+        line = line.replace(",", "")
+        if not line or line == '---':
+            continue
+        if line.startswith('Summary'):
+            return stakes, players, stacks, actions, board
+
+        if state == 'START':
+            if line.startswith('Table'):
+                stakes = float(extract(line.replace(",",""), '/$', ' Real'))
+            elif line.startswith('Seat') and ':' in line:
+                players[extract(line, ': ', ' (')] = id_counter
+
+                stacks.append(float(extract(line, '($', ')')))
+                id_counter += 1
+            elif line.startswith('Dealing pocket cards'):
+                state = 'PREFLOP'
+
+        elif state == 'PREFLOP':
+            if line.startswith('--- Dealing flop'):
+                actions.append('NEXT')
+                board.extend(extract(line, '[', ']').replace(",","").split(" "))
+                for card in board:
+                    assert len(card) in [2, 3]
+                state = 'FLOP'
+            else:
+                res = parse_action(line)
+                if res:
+                    actions.append(res)
+
+        elif state == 'FLOP':
+            if line.startswith('--- Dealing turn'):
+                actions.append('NEXT')
+                board.append(extract(line, '[', ']'))
+                state = 'TURN'
+            else:
+                res = parse_action(line)
+                if res:
+                    actions.append(res)
+        elif state == 'TURN':
+            if line.startswith('--- Dealing river'):
+                actions.append('NEXT')
+                board.append(extract(line, '[', ']'))
+                state = 'RIVER'
+            else:
+                res = parse_action(line)
+                if res:
+                    actions.append(res)
+        elif state == 'RIVER':
+            res = parse_action(line)
+            if res:
+                actions.append(res)
+
+    return False
+
 
 def parse_pty(text):
-    pass
+    def parse_action(line):
+        try:
+            player_ind = players[extract(line, '', ' ')]
+        except:
+            return False
+        action = extract(line, ' ', '')
+        if action.startswith('folds'):
+            action = [0]
+        elif action.startswith('checks'):
+            action = [1]
+        elif action.startswith('calls'):
+            action = [2]
+        elif action.startswith('bets'):
+            amt = float(MATCH_NUM.findall(action)[0])
+            action = [3, amt]
+        elif action.startswith('raises'):
+            amt = float(MATCH_NUM.findall(action)[0])
+            action = [4, amt]
+        elif action.startswith('is all-In'):
+            amt = float(MATCH_NUM.findall(action)[0])
+            action = [5, amt]
+        else:
+            return False
+
+        return [player_ind] + action
+
+    lines = text.split("\n")
+    players = {}
+    stacks = []
+    actions = []
+    board = []
+    stakes = None
+
+    id_counter = 0
+    state = 'START'
+    for line in lines:
+        line = line.replace(",", "")
+        if not line:
+            continue
+        if 'show' in line:
+            return stakes, players, stacks, actions, board
+        if 'has left the table' in line:
+            return False
+
+        if state != 'START' and ': ' in line:
+            continue
+
+        if state == 'START':
+            if line.startswith('$'):
+                stakes = float(extract(line, '$', ' USD')) / 100
+            elif line.startswith('Seat') and ':' in line:
+                players[extract(line, ': ', ' (')] = id_counter
+
+                stacks.append(float(extract(line, '( $', ' USD')))
+                id_counter += 1
+            elif line.startswith('** Dealing down cards **'):
+                state = 'PREFLOP'
+
+        elif state == 'PREFLOP':
+            if line.startswith('** Dealing Flop **'):
+                actions.append('NEXT')
+                board.extend(extract(line, '[ ', ' ]').replace(",","").split(" "))
+                for card in board:
+                    assert len(card) in [2, 3]
+                state = 'FLOP'
+            else:
+                res = parse_action(line)
+                if res:
+                    actions.append(res)
+
+        elif state == 'FLOP':
+            if line.startswith('** Dealing Turn **'):
+                actions.append('NEXT')
+                board.append(extract(line, '[ ', ' ]'))
+                state = 'TURN'
+            else:
+                res = parse_action(line)
+                if res:
+                    actions.append(res)
+        elif state == 'TURN':
+            if line.startswith('** Dealing River **'):
+                actions.append('NEXT')
+                board.append(extract(line, '[ ', ' ]'))
+                state = 'RIVER'
+            else:
+                res = parse_action(line)
+                if res:
+                    actions.append(res)
+        elif state == 'RIVER':
+            res = parse_action(line)
+            if res:
+                actions.append(res)
+
+    return False
 
 def parse_abs(text):
     def parse_action(line):
-        player_ind = players[extract(line, '', ' - ')]
+        try:
+            player_ind = players[extract(line, '', ' ')]
+        except:
+            return False
         action = extract(line, ' - ', '')
         if action.startswith('Fold'):
             action = [0]
@@ -33,7 +217,7 @@ def parse_abs(text):
             amt = float(MATCH_NUM.findall(action)[0])
             action = [5, amt]
         else:
-            print "Not an action:", action
+            return False
 
         return [player_ind] + action
 
@@ -46,20 +230,25 @@ def parse_abs(text):
 
     id_counter = 0
     state = 'START'
-    i = 0
-    while i < len(lines):
-        line = lines[i].replace(",", "")
+    for line in lines:
+        line = line.replace(",", "")
         if not line:
-            i += 1
             continue
+
         if line.startswith('*** SHOW DOWN ***') or 'not called' in line:
             return stakes, players, stacks, actions, board
 
         if state == 'START':
             if line.startswith('Stage'):
-                stakes = float(extract(line, '$', ' - '))
+                if 'ante' in line:
+                    stakes = float(extract(line, '$', ' $'))
+                else:
+                    stakes = float(extract(line, '$', ' - '))
             elif line.startswith('Seat'):
-                players[extract(line, '- ', ' (')] = id_counter
+                try:
+                    players[extract(line, '- ', ' (')] = id_counter
+                except:
+                    return False
 
                 stacks.append(float(extract(line, '($', ' in chips')))
                 id_counter += 1
@@ -69,29 +258,36 @@ def parse_abs(text):
         elif state == 'PREFLOP':
             if line.startswith('*** FLOP ***'):
                 actions.append('NEXT')
-                board.extend(extract(line, '[', ']').split(" "))
+                board.extend(extract(line, '[', ']').replace(",","").split(" "))
+                for card in board:
+                    assert len(card) in [2, 3]
                 state = 'FLOP'
             else:
-                actions.append(parse_action(line))
-
+                res = parse_action(line)
+                if res:
+                    actions.append(res)
         elif state == 'FLOP':
             if line.startswith('*** TURN ***'):
                 actions.append('NEXT')
-                board.append(line[line.rindex('[') + 1, line.rindex(']')])
+                board.append(line[line.rindex('[') + 1: line.rindex(']')])
                 state = 'TURN'
             else:
-                actions.append(parse_action(line))
+                res = parse_action(line)
+                if res:
+                    actions.append(res)
         elif state == 'TURN':
             if line.startswith('*** RIVER ***'):
                 actions.append('NEXT')
-                board.append(line[line.rindex('[') + 1, line.rindex(']')])
+                board.append(line[line.rindex('[') + 1: line.rindex(']')])
                 state = 'RIVER'
             else:
-                actions.append(parse_action(line))
+                res = parse_action(line)
+                if res:
+                    actions.append(res)
         elif state == 'RIVER':
-            actions.append(parse_action(line))
-
-        i += 1
+            res = parse_action(line)
+            if res:
+                actions.append(res)
 
     return False
 
@@ -101,17 +297,22 @@ def parse(filename, output_dir, ind):
         parser = parse_abs
     elif base.startswith('pty'):
         parser = parse_pty
+    elif base.startswith('ong'):
+        parser = parse_ong
     else:
         print "Cannot Parse"
+        return False
 
     with open(filename, 'r') as f:
         hands = f.read().replace("\r\n", "\n").split("\n\n")
         output = []
-        for hand in hands:
+        for i, hand in enumerate(hands):
             try:
                 res = parser(hand)
             except:
+                print "Error with ", filename, "-", i
                 continue
+
             if not res:
                 continue
             stakes, players, stacks, actions, board = res
@@ -141,6 +342,8 @@ def parse(filename, output_dir, ind):
         with open(join(output_dir, output_base), 'w') as g:
             g.write(text)
 
+        return True
+
 if __name__ == '__main__':
     if len(sys.argv) == 2:
         input_files = []
@@ -154,6 +357,8 @@ if __name__ == '__main__':
         input_files = sys.argv[1:-1]
 
     output_dir = sys.argv[-1]
-    for ind, filename in enumerate(input_files):
+    i = 0
+    for filename in input_files:
         print filename
-        parse(filename, output_dir, ind)
+        if parse(filename, output_dir, i):
+            i += 1

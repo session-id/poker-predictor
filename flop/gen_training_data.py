@@ -132,14 +132,31 @@ def gen_training_data(hand):
     for i, move in enumerate(hand['actions'][:num_players]):
         players_to_pos[move[0]] = i
 
-    inputs, outputs = parse_actions(hand['actions'], players_to_pos, num_players)
-    board = parse_board(hand['board'])
+    try:
+        inputs, outputs = parse_actions(hand['actions'], players_to_pos, num_players)
+    except KeyError:
+        print "Error with hand"
+        print hand
+        return False
+
+    assert len(hand['board']) >= 3
+    board = parse_board(hand['board'][:3])
 
     return inputs, board, outputs
 
 if __name__ == '__main__':
-    input_dir = sys.argv[1]
-    output_dir = sys.argv[2]
+    if len(sys.argv) == 2:
+        input_files = []
+        while True:
+            try:
+                line = raw_input()
+                input_files.append(line)
+            except EOFError:
+                break
+    else:
+        input_files = sys.argv[1:-1]
+
+    output_dir = sys.argv[-1]
 
     inputs = []
     outputs = []
@@ -147,9 +164,8 @@ if __name__ == '__main__':
     BUCKET_SIZE = 100
     i = 0
     ind = 0
-    for filename in os.listdir(input_dir):
+    for filename in input_files:
         i += 1
-        filename = os.path.join(input_dir, filename)
         print "Filename:", filename 
 
         f = open(filename, 'r')

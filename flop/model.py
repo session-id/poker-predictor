@@ -141,11 +141,15 @@ def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train Poker Predictor.')
-    parser.add_argument('--file', type=str, help='sum the integers (default: find the max)')
+    parser.add_argument('--file', type=str, help='Start training weights.')
     parser.add_argument('--gpu', const='gpu', default='cpu', nargs="?", 
                         help='sum the integers (default: find the max)')
+    parser.add_argument('--batch-size', type=int, help='Batch size')
 
     args = parser.parse_args()
+
+    if args.batch_size:
+        BATCH_SIZE = args.batch_size
 
     X_train, flops_train, y_train, X_test, flops_test, y_test = load_training_data()
     logging.info("Padding ratio (multiply loss by this): ")

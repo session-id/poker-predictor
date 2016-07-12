@@ -12,7 +12,7 @@ from keras.layers import Dense, Dropout, Activation, TimeDistributed, TimeDistri
 from keras.layers import LSTM, merge, Input
 from keras.callbacks import ModelCheckpoint, ProgbarLogger, Callback
 
-BATCH_SIZE = 64
+BATCH_SIZE = 500
 NUM_EPOCHS = 5
 INPUT_DIM = 16
 FLOP_DIM = 42

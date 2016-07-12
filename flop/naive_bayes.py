@@ -83,7 +83,7 @@ def test(y, X, flops, nb):
     print(total_log_loss / num_total)
 
 if __name__ == '__main__':
-    model.USE_ONE_TRAINING_FILE = True
+    model.USE_ONE_TRAINING_FILE = False
     X_train, flops_train, y_train, X_test, flops_test, y_test = model.load_training_data()
     print("Training...")
     nb = SequenceNaiveBayes(y_train.shape[2], y_train.shape[1], [4, 13, 13, 13, 3, 7])

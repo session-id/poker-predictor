@@ -12,5 +12,5 @@ Validation Loss: 0.5485, 0.4325, 0.4055, 0.3906, 0.3819
 
 Other models:
 
-Naive Bayes: 0.690868414228 average log loss
-Dummy model: 1.07967285824 average log loss
+Naive Bayes: 0.8742 average log loss
+Dummy model: 1.0205 average log loss

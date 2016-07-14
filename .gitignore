@@ -95,5 +95,6 @@ histories/
 parsed_histories/
 flop/training_data/
 preflop/training_data/
+adaptive/training_data/
 training_data_2/
 *.sublime-*

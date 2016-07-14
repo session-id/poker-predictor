@@ -1,4 +1,4 @@
-from __future__ import print_function
+# from __future__ import print_function
 
 import os
 import numpy as np
@@ -19,12 +19,13 @@ FLOP_DIM = 42
 OUTPUT_DIM = 3
 INPUT_LENGTH = 20
 INTER_DIM = (30, 10)
-FLOP_INTER_DIM = (20, 10)
+FLOP_INTER_DIM = (30, 20, 10)
 TRAINING_DATA_DIR = "training_data"
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
 
 SINGLE_TRAINING_FILENAME =  "training_data/training_2.npz"
 USE_ONE_TRAINING_FILE = False
+MAX_TRAINING_FILES = 1000
 
 np.random.seed(1337)  # for reproducibility
 
@@ -55,7 +56,9 @@ def load_training_data():
         Xs = []
         ys = []
         flops = []
-        for filename in os.listdir(TRAINING_DATA_DIR):
+        for i, filename in enumerate(os.listdir(TRAINING_DATA_DIR)):
+            if i > MAX_TRAINING_FILES:
+                break
             full_name = TRAINING_DATA_DIR + "/" + filename
             with open(full_name) as f:
                 data = np.load(f)
@@ -63,6 +66,7 @@ def load_training_data():
                     Xs.append(data["input"])
                     ys.append(data["output"])
                     flops.append(data["board"])
+            logging.info(str(i))
         X_train = np.concatenate(tuple(Xs))
         y_train = np.concatenate(tuple(ys))
         flops_train = np.concatenate(tuple(flops))
@@ -97,22 +101,22 @@ def build_model(processor):
     logging.info('Build model...')
 
     action_input = Input(shape=(INPUT_LENGTH, INPUT_DIM))
-    flop_input = Input(shape=(INPUT_LENGTH, FLOP_DIM))
+    actual_flop_input = Input(shape=(INPUT_LENGTH, FLOP_DIM))
+    flop_input = actual_flop_input
 
     # 2 dense layers to encode flop
-    encoded_flop = TimeDistributed(Dense(FLOP_INTER_DIM[0]))(flop_input)
-    encoded_flop = TimeDistributed(Dense(FLOP_INTER_DIM[1]))(encoded_flop)
+    for dim in FLOP_INTER_DIM:
+        flop_input = TimeDistributed(Dense(dim))(flop_input)
 
-    lstm_input = merge([action_input, encoded_flop], mode='concat', concat_axis=2)
-
-    seq = LSTM(INTER_DIM[0], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
-               input_length=INPUT_LENGTH, input_dim=INPUT_DIM, consume_less=processor)(lstm_input)
-    seq = LSTM(INTER_DIM[1], return_sequences=True, dropout_W=0.2, dropout_U=0.2,
-               input_length=INPUT_LENGTH, input_dim=INTER_DIM[0], consume_less=processor)(seq)
+    seq = merge([action_input, flop_input], mode='concat', concat_axis=2)
+    
+    for dim in INTER_DIM:
+        seq = LSTM(dim, return_sequences=True, dropout_W=0.2, dropout_U=0.2,
+                   consume_less=processor)(seq)
     seq = TimeDistributed(Dense(OUTPUT_DIM))(seq)
     probs = Activation('softmax')(seq)
 
-    model = Model(input=[action_input, flop_input], output=probs)
+    model = Model(input=[action_input, actual_flop_input], output=probs)
 
     # try using different optimizers and different optimizer configs
     model.compile(loss='categorical_crossentropy',
@@ -145,11 +149,16 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', const='gpu', default='cpu', nargs="?", 
                         help='sum the integers (default: find the max)')
     parser.add_argument('--batch-size', type=int, help='Batch size')
+    parser.add_argument('--max-training-files', type=int,
+                        help='Maximum number of training files to use.')
 
     args = parser.parse_args()
 
     if args.batch_size:
         BATCH_SIZE = args.batch_size
+
+    if args.max_training_files:
+        MAX_TRAINING_FILES = args.max_training_files
 
     X_train, flops_train, y_train, X_test, flops_test, y_test = load_training_data()
     logging.info("Padding ratio (multiply loss by this): ")

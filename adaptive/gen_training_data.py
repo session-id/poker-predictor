@@ -163,7 +163,7 @@ if __name__ == '__main__':
                 break
     else:
         input_files = sys.argv[1:-1]
-    input_files = ['../parsed_histories/training_'+str(i)+'.json' for i in range(0, 6031)]
+    # input_files = ['../parsed_histories/training_'+str(i)+'.json' for i in range(0, 6031)]
     output_dir = sys.argv[-1]
 
     for filename in input_files:

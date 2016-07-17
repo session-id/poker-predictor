@@ -43,12 +43,19 @@ class PlayerStats:
             if np.max(o_vec) == 1:
                 skip_next_input = True
 
+def save_csv2(player_to_stats):
+    with open("probs.csv", "wb") as csvfile:
+        writer = csv.writer(csvfile, delimiter=',',
+                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for _, v in player_to_stats.iteritems():
+            writer.writerow([_[:-4]] + list(v))
+
 def save_csv():
     with open("probs.csv", "wb") as csvfile:
         writer = csv.writer(csvfile, delimiter=',',
                             quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for _, v in player_to_stats.iteritems():
-            writer.writerow(list(v))
+            writer.writerow([_] + list(v))
 
 player_to_stats = {}
 

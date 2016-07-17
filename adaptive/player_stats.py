@@ -46,7 +46,7 @@ class PlayerStats:
 def save_csv2(player_to_stats):
     with open("probs.csv", "wb") as csvfile:
         writer = csv.writer(csvfile, delimiter=',',
-                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                            quotechar='"')
         for _, v in player_to_stats.iteritems():
             writer.writerow([_[:-4]] + list(v))
 

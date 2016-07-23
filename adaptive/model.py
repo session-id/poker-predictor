@@ -15,7 +15,7 @@ from keras.layers import LSTM, merge, Input
 from keras.callbacks import ModelCheckpoint, ProgbarLogger, Callback
 
 BATCH_SIZE = 500
-NUM_EPOCHS = 5
+NUM_EPOCHS = 10
 INPUT_DIM = 16
 FLOP_DIM = 42
 OUTPUT_DIM = 3
@@ -25,10 +25,11 @@ FLOP_INTER_DIM = (30, 20, 10)
 TRAINING_DATA_DIR = "training_data"
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
 CLUSTER_FILENAME = "m/clusters.csv"
+SKIP_CLUSTERS = set([0, 1, 2])
 
 SINGLE_TRAINING_FILENAME =  "training_data/training_2.npz"
 USE_ONE_TRAINING_FILE = False
-MAX_TRAINING_FILES = 10
+MAX_TRAINING_FILES = 10000000
 
 np.random.seed(1337)  # for reproducibility
 
@@ -63,14 +64,6 @@ def load_training_data():
                 y = data["output"]
                 flops = data["board"]
 
-                # train_test_sep_idx = int(X.shape[0] * TRAIN_DATA_RATIO)
-                # X_test = X[train_test_sep_idx:]
-                # y_test = y[train_test_sep_idx:]
-                # X = X[:train_test_sep_idx]
-                # y = y[:train_test_sep_idx]
-                # flops_test = flops[train_test_sep_idx:]
-                # flops = flops[:train_test_sep_idx]
-
                 p_to_data[filename[:-4]] = (X, flops, y)
 
     with open(CLUSTER_FILENAME) as f:
@@ -96,11 +89,12 @@ def load_training_data():
                 Xs.append(X)
                 ys.append(y)
                 flops.append(flop)
-        X_train = np.concatenate(tuple(Xs))
-        y_train = np.concatenate(tuple(ys))
-        flops_train = np.concatenate(tuple(flops))
+        if len(Xs) > 0:
+            X_train = np.concatenate(tuple(Xs))
+            y_train = np.concatenate(tuple(ys))
+            flops_train = np.concatenate(tuple(flops))
 
-        cluster_to_data[cluster] = (X_train, flops_train, y_train)
+        cluster_to_data[cluster-1] = (X_train, flops_train, y_train)
 
     return cluster_to_data
 
@@ -133,9 +127,9 @@ def build_model(processor):
     # plot(model, to_file='model.png', show_shapes=True, show_layer_names=True)    
     return model
 
-def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
+def train(model, X_train, y_train, X_test, y_test, cluster, start_weights_file=None):
     logging.info('Train...')
-    save_weights = ModelCheckpoint('weights.{epoch:02d}.hdf5')
+    save_weights = ModelCheckpoint('weights-'+str(cluster)+'.{epoch:02d}.hdf5')
     logger = ProgbarLogger()
     printloss = PrintLoss(pad_ratio(y_test))
 
@@ -147,8 +141,6 @@ def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
 
     score, acc = model.evaluate(X_test, y_test,
                                 batch_size=BATCH_SIZE)
-    # logging.info('Test score: {0}'.format(score))
-    # logging.info('Test accuracy: {0}'.format(acc))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train Poker Predictor.')
@@ -167,9 +159,34 @@ if __name__ == '__main__':
     if args.max_training_files:
         MAX_TRAINING_FILES = args.max_training_files
 
-    X_train, flops_train, y_train, X_test, flops_test, y_test = load_training_data()
-    logging.info("Padding ratio (multiply loss by this): ")
-    logging.info(pad_ratio(y_test))
+    cluster_to_data = load_training_data()
 
-    model = build_model(args.gpu)
-    train(model, [X_train, flops_train], y_train, [X_test, flops_test], y_test, start_weights_file=args.file)
+    logging.info("Finished loading training data. Finalizing training data.")
+
+    models = []
+    for cluster, data in cluster_to_data.iteritems():
+        logging.info("Cluster " + str(cluster))
+        if cluster in SKIP_CLUSTERS:
+            continue;
+        models.append(build_model(args.gpu))
+        X, flops, y = data
+        new_flops = np.zeros((flops.shape[0], INPUT_LENGTH, flops.shape[1]))
+        # Zero out flop before it comes out
+        for i, X_hand in enumerate(X):
+            for j, v in enumerate(X_hand):
+                # First hand post-flop
+                if v[15] == 1:
+                    break
+            new_flops[i] = np.concatenate((np.zeros((j, flops.shape[1])),\
+                                           np.tile(np.expand_dims(flops[i], 0),\
+                                                   (INPUT_LENGTH - j, 1))))
+
+        flops = new_flops.astype(int)
+        train_test_sep_idx = int(X.shape[0] * TRAIN_DATA_RATIO)
+        X_test = X[train_test_sep_idx:]
+        y_test = y[train_test_sep_idx:]
+        X_train = X[:train_test_sep_idx]
+        y_train = y[:train_test_sep_idx]
+        flops_test = flops[train_test_sep_idx:]
+        flops_train = flops[:train_test_sep_idx]
+        train(models[-1], [X_train, flops_train], y_train, [X_test, flops_test], y_test, cluster, start_weights_file=args.file)

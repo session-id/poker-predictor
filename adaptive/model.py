@@ -26,6 +26,7 @@ TRAINING_DATA_DIR = "training_data"
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
 CLUSTER_FILENAME = "m/clusters.csv"
 SKIP_CLUSTERS = set([0, 1, 2])
+TRAINING_LOAD_PRINT_EVERY = 100
 
 SINGLE_TRAINING_FILENAME =  "training_data/training_2.npz"
 USE_ONE_TRAINING_FILE = False
@@ -56,7 +57,8 @@ def load_training_data():
         if i > MAX_TRAINING_FILES:
             break
         full_name = TRAINING_DATA_DIR + "/" + filename
-        print full_name
+        if i % TRAINING_LOAD_PRINT_EVERY:
+            print full_name + "\r",
         with open(full_name) as f:
             data = np.load(f)
             if len(data["input"].shape) == 3 and len(data["output"].shape) == 3:
@@ -95,6 +97,8 @@ def load_training_data():
             flops_train = np.concatenate(tuple(flops))
 
         cluster_to_data[cluster-1] = (X_train, flops_train, y_train)
+
+    print "\n",
 
     return cluster_to_data
 

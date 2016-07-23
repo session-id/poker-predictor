@@ -18,9 +18,13 @@ def find_gradient(scores, weights):
     denoms = last_score + weights.dot(front_scores)
     return front_scores.dot(1./denoms)
 
-def find_weights(scores, steps=1000, lr=.02):
+def find_weights(scores, steps=1000, lr=.02, weights=None):
     N = len(scores)
-    weights = np.ones(N - 1) * (1. / N)
+
+    if weights:
+        weights = weights[:-1]
+    else:
+        weights = np.ones(N - 1) * (1. / N)
 
     for i in range(steps):
         new_weights = weights + lr * find_gradient(scores, weights)
@@ -56,7 +60,7 @@ def evaluate(models, all_inputs, all_desired_outputs):
 
         num_samples = scores.shape[1]
         for i in range(num_samples):
-            weights = find_weights(scores[:,:i])
+            weights = find_weights(scores[:,:i], weights=weights)
             loss += -math.log(np.dot(weights, scores[:,i]))
 
         loss = loss / num_samples

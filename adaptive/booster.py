@@ -61,33 +61,36 @@ def evaluate(models, all_inputs, all_flops, all_desired_outputs):
     N = len(models)
     num_players = len(all_inputs)
     total_loss = 0
+    total_individual_losses = np.zeros(N)
+
     all_scores = get_all_scores(models, all_inputs, all_flops, all_desired_outputs)
 
     for scores, inputs, flops, desired_outputs in zip(all_scores, all_inputs, 
                                                       all_flops, all_desired_outputs):
 
-        scores = np.transpose(np.array([scores[:,i] for i in range(scores.shape[1]) 
-                              if sum(scores[:,i]) != 0]))
+        scores = np.array([scores[:,i] for i in range(scores.shape[1]) 
+                          if sum(scores[:,i]) != 0])
+        log_scores = np.log(scores)
 
-        weights = np.ones(N) * (1. / N)
-        loss = -math.log(np.dot(weights, scores[:,0]))
-        indi_losses = [0] * N
+        num_samples = scores.shape[0]
 
-        num_samples = scores.shape[1]
-        for i in range(num_samples):
-            weights = find_weights(scores[:,:i])
-            loss -= math.log(np.dot(weights, scores[:,i]))
-            for j in range(len(indi_losses)):
-                indi_losses[j] -= math.log(scores[j, i])
+        choices = np.roll(np.argmax(np.cumsum(log_scores, axis=0), axis=1), 1)
+        choices[0] = 0
 
-        loss = loss / num_samples
-        indi_losses = [x / num_samples for x in indi_losses]
-        total_loss += loss
-        print "Weights:", weights
+        loss = 0
+        for index, log_score in zip(choices, log_scores):
+            loss -= log_score[index]
+        loss /= float(num_samples)
+
+        individual_losses = -np.mean(log_scores, (0,))
+
         print "Loss:", loss
-        print "Individual Losses:", indi_losses
+        print "Individual Losses:", individual_losses
 
-    return total_loss / num_players
+        total_loss += loss
+        total_individual_losses += individual_losses
+
+    return total_loss / num_players, total_individual_losses / num_players
 
 
 INPUT_LENGTH = 20
@@ -176,8 +179,11 @@ def main():
                                                           (INPUT_LENGTH - k, 1))))
 
         flops = [x.astype(int) for x in new_flops]
+
+        losses, individual_losses = evaluate(models, X, flops, y)
         print ("Total Cluster Loss for {n} players: {val}"
-               .format(n=len(X), val=evaluate(models, X, flops, y)))
+               .format(n=len(X), val=losses))
+        print "Total Individual Losses:", individual_losses
 
 if __name__ == '__main__':
     main()

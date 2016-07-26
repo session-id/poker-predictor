@@ -84,8 +84,8 @@ def evaluate(models, all_inputs, all_flops, all_desired_outputs):
 
         individual_losses = -np.mean(log_scores, (0,))
 
-        print "Loss:", loss
-        print "Individual Losses:", individual_losses
+        # print "Loss:", loss
+        # print "Individual Losses:", individual_losses
 
         total_loss += loss
         total_individual_losses += individual_losses
@@ -97,7 +97,7 @@ INPUT_LENGTH = 20
 TRAINING_DATA_DIR = 'training_data'
 CLUSTER_FILENAME = 'm/clusters.csv'
 TRAIN_DATA_RATIO = 0.25
-MAX_TRAINING_FILES = 30
+MAX_TRAINING_FILES = 100000
 
 def load_testing_data():
     p_to_data = {}
@@ -107,7 +107,6 @@ def load_testing_data():
         if i > MAX_TRAINING_FILES:
             break
         full_name = TRAINING_DATA_DIR + "/" + filename
-        print full_name
 
         with open(full_name) as f:
             data = np.load(f)
@@ -154,7 +153,7 @@ def load_testing_data():
 def main():
     import model
 
-    models = [model.build_model('cpu') for _ in range(3)]
+    models = [model.build_model('cpu') for _ in range(5)]
     for i, m in enumerate(models):
         m.load_weights('weights-' + str(i) + '.09.hdf5')
 

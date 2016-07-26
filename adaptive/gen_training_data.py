@@ -127,9 +127,6 @@ def gen_training_data(hand):
     if num_players < PLAYER_RANGE[0] or num_players > PLAYER_RANGE[1]:
         return False
 
-    if 'NEXT' not in hand['actions']:
-        return False
-
     # Maps player to their position (UTG is 0, Mid is 1, etc.)
     players_to_pos = {}
     for i, move in enumerate(hand['actions'][:num_players]):
@@ -147,8 +144,10 @@ def gen_training_data(hand):
     all_outputs = {player:all_outputs[pid] 
                    for player, pid in hand['players'].items()}
 
-    assert len(hand['board']) >= 3
-    board = parse_board(hand['board'][:3])
+    if len(hand['board']) == 0:
+        board = [0] * 16
+    else:
+        board = parse_board(hand['board'][:3])
 
     return inputs, board, all_outputs
 

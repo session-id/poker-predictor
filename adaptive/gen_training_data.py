@@ -67,7 +67,7 @@ def parse_actions(actions, players_to_pos, num_players):
     for move in hand['actions']:
         if move == 'NEXT':
             street += 1
-            if street == 2:
+            if street == 1:
                 break
             continue
 
@@ -141,15 +141,16 @@ def gen_training_data(hand):
         print hand
         return False
 
-    all_outputs = {player:all_outputs[pid] 
-                   for player, pid in hand['players'].items()}
+    all_outputs = {player:all_outputs[pid]
+                   for player, pid in hand['players'].items()
+                   if pid in all_outputs}
 
-    if len(hand['board']) == 0:
-        board = [0] * 16
-    else:
-        board = parse_board(hand['board'][:3])
+    # if len(hand['board']) == 0:
+    #     board = [0] * 16
+    # else:
+    #     board = parse_board(hand['board'][:3])
 
-    return inputs, board, all_outputs
+    return inputs, all_outputs
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
@@ -174,9 +175,9 @@ if __name__ == '__main__':
             if not res:
                 continue
 
-            inp, board, outputs = res
+            inp, outputs = res
             for player, out in outputs.items():
                 player = player.replace("/", "-")
                 with open(os.path.join(output_dir, player+'.csv'), 'a') as f:
-                    f.write(",".join([str(inp), str(board), str(out)])+"\n")
+                    f.write(",".join([str(inp), str(out)])+"\n")
         f.close()

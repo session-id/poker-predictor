@@ -23,15 +23,13 @@ if __name__ == '__main__':
         basename = os.path.basename(filename)[:-4]
         out_file = os.path.join(output_dir, basename + '.npz')
         with open(filename, 'r') as f:
-            inputs, boards, outputs = [], [], []
+            inputs, outputs = [], []
             for line in f.readlines():
                 line = "[" + line.strip() + "]"
-                inp, board, out = json.loads(line)
+                inp, out = json.loads(line)
                 inputs.append(inp)
-                boards.append(board)
                 outputs.append(out)
             input_arr = np.asarray(inputs)
-            board_arr = np.asarray(boards)
             output_arr = np.asarray(outputs)
 
-            np.savez_compressed(out_file, input=input_arr, output=output_arr, board=board_arr)
+            np.savez_compressed(out_file, input=input_arr, output=output_arr)

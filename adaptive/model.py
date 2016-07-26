@@ -17,11 +17,9 @@ from keras.callbacks import ModelCheckpoint, ProgbarLogger, Callback
 BATCH_SIZE = 500
 NUM_EPOCHS = 10
 INPUT_DIM = 16
-FLOP_DIM = 42
 OUTPUT_DIM = 3
 INPUT_LENGTH = 20
 INTER_DIM = (30, 10)
-FLOP_INTER_DIM = (30, 20, 10)
 TRAINING_DATA_DIR = "training_data"
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
 CLUSTER_FILENAME = "m/clusters.csv"
@@ -64,9 +62,8 @@ def load_training_data():
             if len(data["input"].shape) == 3 and len(data["output"].shape) == 3:
                 X = data["input"]
                 y = data["output"]
-                flops = data["board"]
 
-                p_to_data[filename[:-4]] = (X, flops, y)
+                p_to_data[filename[:-4]] = (X, y)
 
     with open(CLUSTER_FILENAME) as f:
         for line in f:
@@ -84,19 +81,16 @@ def load_training_data():
     for cluster, players in cluster_to_p.iteritems():
         Xs = []
         ys = []
-        flops = []
         for player in players:
             if player in p_to_data:
-                (X, flop, y) = p_to_data[player]
+                (X, y) = p_to_data[player]
                 Xs.append(X)
                 ys.append(y)
-                flops.append(flop)
         if len(Xs) > 0:
             X_train = np.concatenate(tuple(Xs))
             y_train = np.concatenate(tuple(ys))
-            flops_train = np.concatenate(tuple(flops))
 
-        cluster_to_data[cluster-1] = (X_train, flops_train, y_train)
+        cluster_to_data[cluster-1] = (X_train, y_train)
 
     print "\n",
 
@@ -105,15 +99,7 @@ def load_training_data():
 def build_model(processor):
     logging.info('Build model...')
 
-    action_input = Input(shape=(INPUT_LENGTH, INPUT_DIM))
-    actual_flop_input = Input(shape=(INPUT_LENGTH, FLOP_DIM))
-    flop_input = actual_flop_input
-
-    # 2 dense layers to encode flop
-    for dim in FLOP_INTER_DIM:
-        flop_input = TimeDistributed(Dense(dim))(flop_input)
-
-    seq = merge([action_input, flop_input], mode='concat', concat_axis=2)
+    seq = Input(shape=(INPUT_LENGTH, INPUT_DIM))
     
     for dim in INTER_DIM:
         seq = LSTM(dim, return_sequences=True, dropout_W=0.2, dropout_U=0.2,
@@ -121,7 +107,7 @@ def build_model(processor):
     seq = TimeDistributed(Dense(OUTPUT_DIM))(seq)
     probs = Activation('softmax')(seq)
 
-    model = Model(input=[action_input, actual_flop_input], output=probs)
+    model = Model(input=action_input, output=probs)
 
     # try using different optimizers and different optimizer configs
     model.compile(loss='categorical_crossentropy',
@@ -173,24 +159,11 @@ if __name__ == '__main__':
         if cluster in SKIP_CLUSTERS:
             continue;
         models.append(build_model(args.gpu))
-        X, flops, y = data
-        new_flops = np.zeros((flops.shape[0], INPUT_LENGTH, flops.shape[1]))
-        # Zero out flop before it comes out
-        for i, X_hand in enumerate(X):
-            for j, v in enumerate(X_hand):
-                # First hand post-flop
-                if v[15] == 1:
-                    break
-            new_flops[i] = np.concatenate((np.zeros((j, flops.shape[1])),\
-                                           np.tile(np.expand_dims(flops[i], 0),\
-                                                   (INPUT_LENGTH - j, 1))))
+        X, y = data
 
-        flops = new_flops.astype(int)
         train_test_sep_idx = int(X.shape[0] * TRAIN_DATA_RATIO)
         X_test = X[train_test_sep_idx:]
         y_test = y[train_test_sep_idx:]
         X_train = X[:train_test_sep_idx]
         y_train = y[:train_test_sep_idx]
-        flops_test = flops[train_test_sep_idx:]
-        flops_train = flops[:train_test_sep_idx]
-        train(models[-1], [X_train, flops_train], y_train, [X_test, flops_test], y_test, cluster, start_weights_file=args.file)
+        train(models[-1], X_train, y_train, X_test, y_test, cluster, start_weights_file=args.file)

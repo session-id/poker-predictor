@@ -9,10 +9,10 @@ PLAYER_RANGE = (4, 7)
 ACTION_MAP = {
     0:0,
     1:1,
-    2:1,
-    3:2,
-    4:2,
-    5:2
+    2:2,
+    3:3,
+    4:3,
+    5:3
 }
 
 RANK_MAP = {
@@ -35,7 +35,7 @@ RANK_MAP = {
 excess_count = 0
 
 def get_input_vec(num_players, pos, action, street):
-    input_vec = [0] * 16
+    input_vec = [0] * 17
     if num_players is not None:
         ind = num_players - PLAYER_RANGE[0]
         input_vec[ind] = 1
@@ -46,7 +46,7 @@ def get_input_vec(num_players, pos, action, street):
         ind = action + 11
         input_vec[ind] = 1
     if street is not None:
-        ind = street + 14
+        ind = street + 15
         input_vec[ind] = 1
 
     return input_vec
@@ -54,6 +54,11 @@ def get_input_vec(num_players, pos, action, street):
 def get_output_vec(action):
     output_vec = [0] * 3
     if action is not None:
+        if action == 2:
+            action = 1
+        elif action == 3:
+            action = 2
+
         output_vec[action] = 1
 
     return output_vec

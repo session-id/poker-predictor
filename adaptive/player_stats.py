@@ -43,21 +43,24 @@ class PlayerStats:
             if np.max(o_vec) == 1:
                 skip_next_input = True
 
-def save_csv2(player_to_stats):
-    with open("probs.csv", "wb") as csvfile:
+def save_csv2(player_to_stats, filename):
+    with open(filename, "wb") as csvfile:
         writer = csv.writer(csvfile, delimiter=',',
                             quotechar='"')
         for _, v in player_to_stats.iteritems():
             writer.writerow([_[:-4]] + list(v))
 
-def save_csv():
-    with open("probs.csv", "wb") as csvfile:
+def save_csv(filename):
+    with open(filename, "wb") as csvfile:
         writer = csv.writer(csvfile, delimiter=',',
                             quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for _, v in player_to_stats.iteritems():
             writer.writerow([_] + list(v))
 
 player_to_stats = {}
+
+COLLECT_ACTION_PCT = False
+COLLECT_VPIP_PFR = True
 
 def compile_stats():
     logging.info('Loading data...')
@@ -72,8 +75,19 @@ def compile_stats():
             if len(data["input"].shape) == 3 and len(data["output"].shape) == 3:
                 X = data["input"]
                 y = data["output"]
-                probs = np.divide(np.sum(y, (0,1)).astype(np.float64),
-                                  np.sum(y, (0,1,2)))
-                player_to_stats[filename] = probs
+                if COLLECT_ACTION_PCT:
+                    probs = np.divide(np.sum(y, (0,1)).astype(np.float64),
+                                      np.sum(y, (0,1,2)))
+                    player_to_stats[filename] = probs
+                elif COLLECT_VPIP_PFR:
+                    # Assumes actions are (fold, check, call, raise)
+                    actions = X[:,:,11:15]
+                    if (np.sum(actions, (0,1,2)) < 100):
+                        continue
+                    probs = np.divide(np.sum(actions, (0,1)).astype(np.float64),
+                                      np.sum(actions, (0,1,2)))
+                    pfr = probs[3]
+                    vpip = probs[3] + probs[2]
+                    player_to_stats[filename] = np.array([vpip, pfr])
 
 # compile_stats()

@@ -1,2 +1,6 @@
 vpip_pfr.csv
 vpip_pfr_clusters.csv
+model_output.txt
+nc_model_output.txt
+no_cluster_model_output.txt
+cross_cluster_test_output.txt

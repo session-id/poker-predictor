@@ -16,15 +16,16 @@ from keras.callbacks import ModelCheckpoint, ProgbarLogger, Callback
 
 BATCH_SIZE = 500
 NUM_EPOCHS = 10
-INPUT_DIM = 16
+INPUT_DIM = 17
 OUTPUT_DIM = 3
 INPUT_LENGTH = 20
 INTER_DIM = (30, 10)
 TRAINING_DATA_DIR = "training_data"
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
-CLUSTER_FILENAME = "m/clusters.csv"
+CLUSTER_FILENAME = "vpip_pfr_clusters.csv"
 SKIP_CLUSTERS = set([0, 1, 2])
 TRAINING_LOAD_PRINT_EVERY = 100
+CLUSTER_OFFSET = 0 # Amount to add to written cluster index to get actual index
 
 SINGLE_TRAINING_FILENAME =  "training_data/training_2.npz"
 USE_ONE_TRAINING_FILE = False
@@ -51,11 +52,18 @@ def load_training_data():
     p_to_data = {}
     p_to_cluster = {}
 
-    for i, filename in enumerate(os.listdir(TRAINING_DATA_DIR)):
+    with open(CLUSTER_FILENAME) as f:
+        for line in f:
+            comma_idx = line.index(",")
+            player_name = line[:comma_idx]
+            cluster = int(line[comma_idx+1:])
+            p_to_cluster[player_name] = cluster
+
+    for i, filename in enumerate(p_to_cluster.keys()):
         if i > MAX_TRAINING_FILES:
             break
         full_name = TRAINING_DATA_DIR + "/" + filename
-        if i % TRAINING_LOAD_PRINT_EVERY:
+        if i % TRAINING_LOAD_PRINT_EVERY == 0:
             print full_name + "\r",
         with open(full_name) as f:
             data = np.load(f)
@@ -63,14 +71,7 @@ def load_training_data():
                 X = data["input"]
                 y = data["output"]
 
-                p_to_data[filename[:-4]] = (X, y)
-
-    with open(CLUSTER_FILENAME) as f:
-        for line in f:
-            comma_idx = line.index(",")
-            player_name = line[:comma_idx]
-            cluster = int(line[comma_idx+1:])
-            p_to_cluster[player_name] = cluster
+                p_to_data[filename] = (X, y)
 
     # This can be constructed earlier but it's very fast anyway
     cluster_to_p = defaultdict(lambda: [])
@@ -89,8 +90,9 @@ def load_training_data():
         if len(Xs) > 0:
             X_train = np.concatenate(tuple(Xs))
             y_train = np.concatenate(tuple(ys))
-
-        cluster_to_data[cluster-1] = (X_train, y_train)
+            cluster_to_data[cluster+CLUSTER_OFFSET] = (X_train, y_train)
+        else:
+            print "Empty Cluster:", cluster
 
     print "\n",
 
@@ -99,8 +101,8 @@ def load_training_data():
 def build_model(processor):
     logging.info('Build model...')
 
-    seq = Input(shape=(INPUT_LENGTH, INPUT_DIM))
-    
+    action_input = seq = Input(shape=(INPUT_LENGTH, INPUT_DIM))
+        
     for dim in INTER_DIM:
         seq = LSTM(dim, return_sequences=True, dropout_W=0.2, dropout_U=0.2,
                    consume_less=processor)(seq)

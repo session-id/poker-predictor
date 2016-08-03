@@ -14,11 +14,11 @@ from keras.callbacks import ModelCheckpoint, ProgbarLogger, Callback
 
 BATCH_SIZE = 64
 NUM_EPOCHS = 5
-INPUT_DIM = 14
+INPUT_DIM = 17
 INPUT_LENGTH = 20
 OUTPUT_DIM = 3
 INTER_DIM = (20, 10)
-TRAINING_DATA_DIR = "training_data"
+TRAINING_DATA_DIR = "../adaptive/training_data"
 USE_ONE_TRAINING_FILE = False
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
 CLUSTER_FILENAME = "../vpip_pfr_clusters.csv"
@@ -43,7 +43,7 @@ def load_training_data():
 
     # Only for testing
     if USE_ONE_TRAINING_FILE:
-        filename = "training_data/training_0.npz";
+        filename = "../adaptive/training_data/00d5UcT1hvMMwvmgryyCuA.npz"
         with open(filename) as f:
             data = np.load(f)
             X_train = data["input"]
@@ -51,10 +51,9 @@ def load_training_data():
     else:
         Xs = []
         ys = []
-
         files = os.listdir(TRAINING_DATA_DIR)
         np.random.shuffle(files)
-        for filename in enumerate(files):
+        for filename in files:
             full_name = TRAINING_DATA_DIR + "/" + filename
             with open(full_name) as f:
                 data = np.load(f)

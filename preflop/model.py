@@ -21,6 +21,7 @@ INTER_DIM = (20, 10)
 TRAINING_DATA_DIR = "training_data"
 USE_ONE_TRAINING_FILE = False
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
+CLUSTER_FILENAME = "../vpip_pfr_clusters.csv"
 
 np.random.seed(1337)  # for reproducibility
 
@@ -50,8 +51,11 @@ def load_training_data():
     else:
         Xs = []
         ys = []
-        for filename in os.listdir(TRAINING_DATA_DIR):
-            full_name = TRAINING_DATA_DIR + "/" + filename;
+
+        files = os.listdir(TRAINING_DATA_DIR)
+        np.random.shuffle(files)
+        for filename in enumerate(files):
+            full_name = TRAINING_DATA_DIR + "/" + filename
             with open(full_name) as f:
                 data = np.load(f)
                 Xs.append(data["input"])
@@ -76,6 +80,58 @@ def load_training_data():
     y_train = y_train[:train_test_sep_idx]
 
     return X_train, y_train, X_test, y_test
+
+def load_training_data():
+    logging.info('Loading data...')
+
+    p_to_data = {}
+    p_to_cluster = {}
+
+    with open(CLUSTER_FILENAME) as f:
+        for line in f:
+            comma_idx = line.index(",")
+            player_name = line[:comma_idx]
+            cluster = int(line[comma_idx+1:])
+            p_to_cluster[player_name] = cluster
+
+    for i, filename in enumerate(p_to_cluster.keys()):
+        if i > MAX_TRAINING_FILES:
+            break
+        full_name = TRAINING_DATA_DIR + "/" + filename
+        if i % TRAINING_LOAD_PRINT_EVERY == 0:
+            print full_name + "\r",
+        with open(full_name) as f:
+            data = np.load(f)
+            if len(data["input"].shape) == 3 and len(data["output"].shape) == 3:
+                X = data["input"]
+                y = data["output"]
+
+                p_to_data[filename] = (X, y)
+
+    # This can be constructed earlier but it's very fast anyway
+    cluster_to_p = defaultdict(lambda: [])
+    for k, v in p_to_cluster.iteritems():
+        cluster_to_p[v].append(k)
+
+    cluster_to_data = {}
+    for cluster, players in cluster_to_p.iteritems():
+        Xs = []
+        ys = []
+        for player in players:
+            if player in p_to_data:
+                (X, y) = p_to_data[player]
+                Xs.append(X)
+                ys.append(y)
+        if len(Xs) > 0:
+            X_train = np.concatenate(tuple(Xs))
+            y_train = np.concatenate(tuple(ys))
+            cluster_to_data[cluster+CLUSTER_OFFSET] = (X_train, y_train)
+        else:
+            print "Empty Cluster:", cluster
+
+    print "\n",
+
+    return cluster_to_data
 
 def build_model(processor):
     logging.info('Build model...')
@@ -122,9 +178,22 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    X_train, y_train, X_test, y_test = load_training_data()
-    logging.info("Padding ratio (multiply loss by this): ")
-    logging.info(pad_ratio(y_test))
 
-    model = build_model(args.gpu)
-    train(model, X_train, y_train, X_test, y_test, start_weights_file=args.file)
+    cluster_to_data = load_training_data()
+
+    logging.info("Finished loading training data. Finalizing training data.")
+
+    models = []
+    for cluster, data in cluster_to_data.iteritems():
+        logging.info("Cluster " + str(cluster))
+        if cluster in SKIP_CLUSTERS:
+            continue;
+        models.append(build_model(args.gpu))
+        X, y = data
+
+        train_test_sep_idx = int(X.shape[0] * TRAIN_DATA_RATIO)
+        X_test = X[train_test_sep_idx:]
+        y_test = y[train_test_sep_idx:]
+        X_train = X[:train_test_sep_idx]
+        y_train = y[:train_test_sep_idx]
+        train(models[-1], X_train, y_train, X_test, y_test, cluster, start_weights_file=args.file)

@@ -21,6 +21,7 @@ OUTPUT_DIM = 3
 INPUT_LENGTH = 20
 INTER_DIM = (30, 10)
 TRAINING_DATA_DIR = "training_data"
+WEIGHTS_DIR = "weights"
 TRAIN_DATA_RATIO = 0.75 # Amount of total data to use for training
 CLUSTER_FILENAME = "vpip_pfr_clusters.csv"
 SKIP_CLUSTERS = set([0, 1, 2])
@@ -121,7 +122,8 @@ def build_model(processor):
 
 def train(model, X_train, y_train, X_test, y_test, cluster, start_weights_file=None):
     logging.info('Train...')
-    save_weights = ModelCheckpoint('weights-'+str(cluster)+'.{epoch:02d}.hdf5')
+    save_weights = ModelCheckpoint(WEIGHTS_DIR + 'weights-'+ str(cluster) + \
+            '.{epoch:02d}.hdf5')
     logger = ProgbarLogger()
     printloss = PrintLoss(pad_ratio(y_test))
 

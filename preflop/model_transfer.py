@@ -112,7 +112,8 @@ def build_model(processor):
                         zero_objective],
                   optimizer='rmsprop',
                   # metrics=['accuracy'],
-                  loss_weights=[1., 0.])
+                  loss_weights=[1., 0.]
+    )
 
     # plot(model, to_file='model.png', show_shapes=True, show_layer_names=True)    
     return model

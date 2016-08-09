@@ -102,15 +102,45 @@ def build_model(processor):
     probs = Activation('softmax', name='prob_output')(seq[-1])
 
     # Output contains probabilities and input into layer before dense and softmax
+    model = Model(input=action_input, output=probs) #[probs, second_to_last]
+
+    # try using different optimizers and different optimizer configs
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='rmsprop',
+                  # metrics=['accuracy'],
+    )
+
+    # plot(model, to_file='model.png', show_shapes=True, show_layer_names=True)    
+    return model
+
+def build_model2(processor):
+    logging.info('Build model...')
+
+    action_input = Input(shape=(INPUT_LENGTH, INPUT_DIM), name='action_input')
+    seq = [action_input] 
+   
+    # seq contains the outputs of every layer
+    for i, dim in enumerate(INTER_DIM):
+        if i == len(INTER_DIM) - 2:
+            seq.append(LSTM(dim, return_sequences=True, dropout_W=0.2, dropout_U=0.2,
+                consume_less=processor, name='second_to_last_output')(seq[-1]))
+            second_to_last = seq[-1]
+        else:
+            seq.append(LSTM(dim, return_sequences=True, dropout_W=0.2, dropout_U=0.2,
+                consume_less=processor)(seq[-1]))
+    seq.append(TimeDistributed(Dense(OUTPUT_DIM))(seq[-1]))
+    probs = Activation('softmax', name='prob_output')(seq[-1])
+
+    # Output contains probabilities and input into layer before dense and softmax
     model = Model(input=action_input, output=[probs, second_to_last])
 
     # try using different optimizers and different optimizer configs
     model.compile(loss='categorical_crossentropy',
                   optimizer='rmsprop',
                   # metrics=['accuracy'],
-                  loss_weights=[1., 0.])
+                  loss_weights=[1., 0.]
+    )
 
-    # plot(model, to_file='model.png', show_shapes=True, show_layer_names=True)    
     return model
 
 def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
@@ -125,12 +155,12 @@ def train(model, X_train, y_train, X_test, y_test, start_weights_file=None):
     dummy_train = np.zeros((y_train.shape[0], y_train.shape[1], INTER_DIM[-2]))
     dummy_test = np.zeros((y_test.shape[0], y_test.shape[1], INTER_DIM[-2]))
 
-    model.fit(X_train, [y_train, dummy_train], batch_size=BATCH_SIZE,
+    model.fit(X_train, y_train, batch_size=BATCH_SIZE,
               nb_epoch=NUM_EPOCHS,
-              validation_data=(X_test, [y_test, dummy_test]),
+              validation_data=(X_test, y_test),
               callbacks=[save_weights, logger, printloss])
 
-    losses = model.evaluate(X_test, [y_test, dummy_test],
+    losses = model.evaluate(X_test, y_test,
                             batch_size=BATCH_SIZE)
     loss = losses[0]
     logging.info('Scaled test loss: {0}'.format(loss*pad_ratio(y_test)))

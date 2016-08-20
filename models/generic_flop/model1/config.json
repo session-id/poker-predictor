@@ -1,0 +1,23 @@
+{
+    "train": {
+        "training_folder": "training_data/flop/",
+        "group": false, 
+        "randomize_hands": true,
+        "randomize_players": true,
+        "training_ratio": 0.75,
+        "is_preflop": false,
+        "epochs": 10,
+        "batch_size": 30,
+        "max_files": 5
+    },
+    "predict": {
+        "predict_folder": "training_data/flop/",
+        "is_preflop": false,
+        "output_folder": "training_data/feature/",
+        "output_name": "input",
+        "keep_target": true,
+        "keep_input": false,
+        "weights_file": "weights.09.hdf5",
+        "max_files": 5
+    }
+}

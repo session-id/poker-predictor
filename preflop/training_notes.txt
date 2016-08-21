@@ -43,5 +43,6 @@ True Loss: .8205, .8033, .7993, .7972, .7904
 
 Other models:
 
-Naive Bayes: 0.843889160562 average log loss
-Dummy model: 0.887194229042 average log loss
+Naive Bayes: 0.8742 average log loss
+Dummy model: 1.0205 average log loss
+NNet: 0.6885

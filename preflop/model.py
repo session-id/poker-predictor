@@ -7,9 +7,6 @@ import argparse
 
 from keras.preprocessing import sequence
 from keras.utils import np_utils
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, TimeDistributed, TimeDistributedDense
-from keras.layers import LSTM
 from keras.callbacks import ModelCheckpoint, ProgbarLogger, Callback
 
 BATCH_SIZE = 64

@@ -56,7 +56,9 @@ def load_training_data():
         Xs = []
         ys = []
         flops = []
-        for i, filename in enumerate(os.listdir(TRAINING_DATA_DIR)):
+        files = os.listdir(TRAINING_DATA_DIR)
+        np.random.shuffle(files)
+        for i, filename in enumerate(files):
             if i > MAX_TRAINING_FILES:
                 break
             full_name = TRAINING_DATA_DIR + "/" + filename

@@ -2,6 +2,10 @@ from os.path import *
 import sys
 import re
 import json
+import logging
+import os
+
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
 MATCH_NUM = re.compile('\d+\.?\d*')
 
@@ -300,7 +304,7 @@ def parse(filename, output_dir, ind):
     elif base.startswith('ong'):
         parser = parse_ong
     else:
-        print "Cannot Parse"
+        logging.info("Cannot Parse")
         return False
 
     with open(filename, 'r') as f:
@@ -310,7 +314,7 @@ def parse(filename, output_dir, ind):
             try:
                 res = parser(hand)
             except:
-                print "Error with ", filename, "-", i
+                logging.info("Error with " + filename)
                 continue
 
             if not res:
@@ -345,20 +349,10 @@ def parse(filename, output_dir, ind):
         return True
 
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        input_files = []
-        while True:
-            try:
-                line = raw_input()
-                input_files.append(line)
-            except EOFError:
-                break
-    else:
-        input_files = sys.argv[1:-1]
-
-    output_dir = sys.argv[-1]
+    input_dir = sys.argv[1]
+    output_dir = sys.argv[2]
     i = 0
-    for filename in input_files:
-        print filename
-        if parse(filename, output_dir, i):
+    for filename in os.listdir(input_dir):
+        logging.info("Parsing: " + filename)
+        if parse(join(input_dir, filename), output_dir, i):
             i += 1

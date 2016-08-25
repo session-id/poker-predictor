@@ -1,7 +1,7 @@
 {
     "train": {
         "training_folder": "training_data/preflop/",
-        "group": true, 
+        "group": false, 
         "randomize_hands": true,
         "randomize_players": true,
         "training_ratio": 0.75,

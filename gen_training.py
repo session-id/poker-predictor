@@ -210,6 +210,9 @@ if __name__ == '__main__':
                 board_arr = np.asarray(boards)
             input_arr = np.asarray(inputs)
             output_arr = np.asarray(outputs)
+            if input_arr.shape[-2:] != (20, 17):
+                print input_arr.shape
+                break
 
             if args.street != 'preflop':
                 np.savez_compressed(out_file, input=input_arr, board=board_arr, output=output_arr)

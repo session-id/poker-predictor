@@ -6,8 +6,7 @@
         "randomize_players": true,
         "training_ratio": 0.75,
         "is_preflop": true,
-        "epochs": 10,
-        "batch_size": 30,
-        "max_files": 5
+        "epochs": 6,
+        "batch_size": 500
     }
 }

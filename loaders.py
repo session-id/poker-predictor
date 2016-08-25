@@ -4,8 +4,7 @@ import random
 
 def load_training_data(folder, randomize_hands=False, randomize_players=False, 
                        group=False, training_ratio=0.75, is_preflop=True,
-                       max_files=None, training_hands=100, min_testing_hands=50,
-                       load_all=False):
+                       max_files=None, min_hands=150, load_all=False):
     fields = ['input', 'output']
     if not is_preflop:
         fields.insert(1, 'board')
@@ -34,32 +33,29 @@ def load_training_data(folder, randomize_hands=False, randomize_players=False,
         random.shuffle(arrays)
         arrays = zip(*arrays)
 
-    new_arrays = []
-    if group:
-        for i, field in enumerate(arrays):
-            arrays[i] = np.concatenate(field)
-
     if load_all:
+        if group:
+            for i, field in enumerate(arrays):
+                arrays[i] = np.concatenate(field)
+
         if is_preflop:
             return arrays
         else:
             return [arrays[0], arrays[1]], arrays[2]
 
-    if group:
-        for field in arrays:
-            ind = int(len(field) * training_ratio)
-            new_arrays.append(field[:ind])
-            new_arrays.append(field[ind:])
-    else:
-        for i, field in enumerate(arrays):
-            train = []
-            test = []
-            for player in field:
-                if len(player) < training_hands + min_testing_hands:
-                    continue
-                train.append(player[:training_hands])
-                test.append(player[training_hands:])
-            new_arrays.extend([train, test])
+    new_arrays = []
+    for i, field in enumerate(arrays):
+        train = []
+        test = []
+        for player in field:
+            if len(player) < min_hands:
+                continue
+            ind = int(len(player) * training_ratio)
+            train.append(player[:ind])
+            test.append(player[ind:])
+        if group:
+            train, test = [np.concatenate(x) for x in [train, test]]
+        new_arrays.extend([train, test])
 
     if not is_preflop:
         rearrange = lambda x: [[x[0], x[2]], [x[1], x[3]], x[4], x[5]]

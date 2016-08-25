@@ -1,0 +1,14 @@
+{
+    "train": {
+        "training_folder": "training_data/preflop/",
+        "group": true, 
+        "randomize_hands": true,
+        "randomize_players": true,
+        "training_ratio": 0.75,
+        "min_hands": 150,
+        "is_preflop": true,
+        "epochs": 10,
+        "batch_size": 30,
+        "max_files": 5
+    }
+}
